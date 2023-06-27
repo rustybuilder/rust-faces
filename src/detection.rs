@@ -1,5 +1,5 @@
 use crate::{nms::Nms, Rect};
-use image::{ImageBuffer, Rgb};
+use ndarray::ArrayViewD;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -29,8 +29,8 @@ pub struct Face {
     pub landmarks: Option<Vec<(f32, f32)>>,
 }
 
-pub trait FaceDetector {
-    fn detect(&self, image: &ImageBuffer<Rgb<u8>, Vec<u8>>) -> RustFacesResult<Vec<Face>>;
+pub trait FaceDetector: Sync + Send {
+    fn detect(&self, image: ArrayViewD<u8>) -> RustFacesResult<Vec<Face>>;
 }
 
 #[derive(Debug, Copy, Clone)]

@@ -20,6 +20,7 @@ viz = ["dep:imageproc"]
 
 [dev-dependencies]
 rstest = "0.17.0"
+cargo-make = "0.35.0"
 
 [[test]]
 name = "should_have_smooth_design"

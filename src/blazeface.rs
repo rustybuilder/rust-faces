@@ -5,7 +5,7 @@ use image::{
     GenericImageView, ImageBuffer, Pixel, Rgb,
 };
 use itertools::iproduct;
-use ndarray::{Array3, Axis};
+use ndarray::{Array3, ArrayViewD, Axis};
 use ort::tensor::{FromArray, OrtOwnedTensor};
 
 use crate::{
@@ -162,9 +162,19 @@ impl BlazeFace {
 }
 
 impl FaceDetector for BlazeFace {
-    fn detect(&self, image: &ImageBuffer<Rgb<u8>, Vec<u8>>) -> RustFacesResult<Vec<Face>> {
+    fn detect(&self, image: ArrayViewD<u8>) -> RustFacesResult<Vec<Face>> {
+        let shape = image.shape().to_vec();
+        let (width, height, _) = (shape[1], shape[0], shape[2]);
+
+        let image = ImageBuffer::<Rgb<u8>, &[u8]>::from_raw(
+            width as u32,
+            height as u32,
+            image.as_slice().unwrap(),
+        )
+        .unwrap();
+
         let (image, ratio) = resize_and_border(
-            image,
+            &image,
             (self.target_size as u32, self.target_size as u32),
             Rgb([104, 117, 123]),
         );
@@ -254,9 +264,9 @@ impl FaceDetector for BlazeFace {
 #[cfg(test)]
 mod tests {
     use crate::{
+        imaging::ToRgb8,
         model_repository::{GitHubRepository, ModelRepository},
-        testing::{output_dir, sample_image},
-        viz,
+        testing::{output_dir, sample_array_image, sample_image},
     };
 
     use super::*;
@@ -266,7 +276,7 @@ mod tests {
     use std::path::PathBuf;
 
     #[rstest]
-    pub fn test_resize_yolo(sample_image: RgbImage, output_dir: PathBuf) {
+    pub fn test_resize_and_border(sample_image: RgbImage, output_dir: PathBuf) {
         let (resized, _) = resize_and_border(&sample_image, (1280, 1280), Rgb([0, 255, 0]));
 
         resized.save(output_dir.join("test_resized.jpg")).unwrap();
@@ -276,7 +286,8 @@ mod tests {
 
     #[rstest]
     #[cfg(feature = "viz")]
-    fn should_detect(mut sample_image: RgbImage, output_dir: PathBuf) {
+    fn should_detect(sample_array_image: Array3<u8>, output_dir: PathBuf) {
+        use crate::viz;
         let environment = Arc::new(
             ort::Environment::builder()
                 .with_name("BlazeFace")
@@ -297,10 +308,14 @@ mod tests {
                 ..Default::default()
             },
         );
-        let faces = face_detector.detect(&sample_image).unwrap();
-        viz::draw_faces(&mut sample_image, faces);
+        let mut canvas = sample_array_image.to_rgb8();
+        let faces = face_detector
+            .detect(sample_array_image.into_dyn().view())
+            .unwrap();
 
-        sample_image
+        viz::draw_faces(&mut canvas, faces);
+
+        canvas
             .save(output_dir.join("blazefaces.png"))
             .expect("Can't save image");
     }

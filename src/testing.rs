@@ -1,7 +1,20 @@
 use std::path::PathBuf;
 
 use image::RgbImage;
+use ndarray::Array3;
 use rstest::fixture;
+
+use crate::imaging::ToArray3;
+
+#[fixture]
+pub fn sample_array_image() -> Array3<u8> {
+    image::io::Reader::open("tests/data/images/kate_siegel.jpg")
+        .unwrap()
+        .decode()
+        .unwrap()
+        .into_rgb8()
+        .into_array3()
+}
 
 #[fixture]
 pub fn sample_image() -> RgbImage {
