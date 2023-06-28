@@ -7,7 +7,7 @@ This project aims to provide a Rust interface for multiple state-of-the-art face
 * Integration of multiple face detection models;
 * Rust interface: The core implementation is written in Rust, leveraging its safety, performance, and concurrency features for preprocessing, non-maxima suppression, and other non-neural-network computationally intensive tasks.
 * ONNX Runtime inference provided by [ort](https://github.com/pykeio/ort).
-* Language bindings: The project will provide bindings to Python (W.I.P.), C (⚙️), C++ (⚙️), Java (⚙️), and C# (⚙️), enabling more developers with face technologies.
+* Language bindings: The project will provide bindings to Python (✔️), C (⚙️), C++ (⚙️), Java (⚙️), and C# (⚙️), enabling more developers with face technologies.
 * Easy integration
 
 ## Supported Face Detection Models
