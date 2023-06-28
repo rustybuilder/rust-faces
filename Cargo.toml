@@ -1,6 +1,6 @@
 [package]
 name = "rust-faces"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 authors = ["Rusty Builder <usty_builder@mail2world.com>"]
 description = "A Rust library for face detection"
