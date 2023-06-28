@@ -107,6 +107,8 @@ plt.show()
 
 Contributions to the project are welcome! If you have suggestions, bug reports, or would like to add support for additional face detection models or programming languages, please feel free to submit a pull request or open an issue.
 
+Backlog: https://github.com/users/rustybuilder/projects/1
+
 ## License
 
 This project is licensed under the MIT License.
