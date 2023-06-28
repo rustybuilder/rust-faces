@@ -88,7 +88,7 @@ More details on the [Ort](https://github.com/pykeio/ort) project.
 
 **Requirements**
 
-* Rust
+* [Rust](https://www.rust-lang.org/learn/get-started)
 * [Onnx Runtime](https://github.com/microsoft/onnxruntime/releases/tag/v1.15.1) - Download one of the releases
 
 
