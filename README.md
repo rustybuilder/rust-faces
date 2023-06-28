@@ -6,7 +6,7 @@ This project aims to provide a Rust interface for multiple state-of-the-art face
 
 * Integration of multiple face detection models;
 * Rust interface: The core implementation is written in Rust, leveraging its safety, performance, and concurrency features for preprocessing, non-maxima suppression, and other non-neural-network computationally intensive tasks.
-* ONNX Runtime inference provided by [ort](https://github.com/pykeio/ort).
+* ONNX Runtime inference provided by [Ort](https://github.com/pykeio/ort).
 * Language bindings: The project will provide bindings to Python (✔️), C (⚙️), C++ (⚙️), Java (⚙️), and C# (⚙️), enabling more developers with face technologies.
 * Easy integration
 
@@ -15,7 +15,7 @@ This project aims to provide a Rust interface for multiple state-of-the-art face
 The project aims to include a selection of popular and high-performing face detection models, such as:
 
 * [ ] RetinaFace
-* [ ] BlazeFace - W.I.P.
+* [ ] [BlazeFace](https://github.com/zineos/blazeface) - Only BlazeFace640
 * [ ] MTCNN (Multi-Task Cascaded Convolutional Networks)
 * [ ] EfficientDet
 
@@ -58,6 +58,32 @@ pub fn main() {
 }
 ```
 
+### Make OnnxRuntime shared library available
+
+[Linux] If necessary, export your library path to the onnx runtime directory.
+
+```shell
+$ export LD_LIBRARY_PATH=<path to onnx runtime lib directory>:$LD_LIBRARY_PATH
+```
+
+If you still receive the following error message:
+
+> PanicException: ort 1.14 is not compatible with the ONNX Runtime binary found at `onnxruntime.dll`; expected GetVersionString to return '1.14.x', but got '1.10.0'
+
+Try to direct set the environment variable `ORT_DYLIB_PATH`: 
+
+```bash
+# bash
+$ export ORT_DYLIB_PATH="<your onnx runtime dir>/onnxruntime.so"
+```
+
+```powershell
+# Powershell
+> $env:ORT_DYLIB_PATH="<your onnx runtime dir>/onnxruntime.dll"
+```
+
+More details on the [Ort](https://github.com/pykeio/ort) project.
+
 ## Python usage
 
 **Requirements**
@@ -67,14 +93,10 @@ pub fn main() {
 
 
 ```shell
-$ pip install git+https://github.com/rust-faces/python
+$ pip install -e "git+https://github.com/rustybuilder/rust-faces.git#egg=py-rust-faces&subdirectory=python"
 ```
 
-```shell
-$ export LD_LIBRARY_PATH=<path to onnx runtime lib directory>
-```
-
-For Python, use the provided Python wrapper:
+Usage:
 
 ```python
 import numpy as np
