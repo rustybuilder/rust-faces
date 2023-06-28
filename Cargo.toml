@@ -2,6 +2,11 @@
 name = "rust-faces"
 version = "0.1.0"
 edition = "2021"
+authors = ["Rusty Builder <usty_builder@mail2world.com>"]
+description = "A Rust library for face detection"
+license = "MIT"
+repository = "https://github.com/rustybuilder/rust-faces"
+readme = "README.md"
 
 [dependencies]
 image = "0.24.6"
@@ -12,6 +17,7 @@ imageproc = { version = "0.23.0", optional = true }
 reqwest = { version = "0.11.18", features = ["blocking"] }
 home = "0.5.5"
 thiserror = "1.0.40"
+itertools = "0.11.0"
 
 [features]
 default = []
@@ -19,6 +25,7 @@ viz = ["dep:imageproc"]
 
 [dev-dependencies]
 rstest = "0.17.0"
+cargo-make = "0.35.0"
 
 [[test]]
 name = "should_have_smooth_design"
