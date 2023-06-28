@@ -239,7 +239,7 @@ impl FaceDetector for BlazeFace {
                     let score = score[1];
 
                     if score > self.params.score_threshold {
-                        let rect = rect.scale2d(scale_ratios.0, scale_ratios.1);
+                        let rect = rect.scale(scale_ratios.0, scale_ratios.1);
                         Some((rect, score, landmarks))
                     } else {
                         None
@@ -284,9 +284,12 @@ mod tests {
         assert!(resized.height() == 1280);
     }
 
-    #[rstest]
     #[cfg(feature = "viz")]
-    fn should_detect(sample_array_image: Array3<u8>, output_dir: PathBuf) {
+    fn should_detect_impl(
+        blaze_model: crate::FaceDetection,
+        sample_array_image: Array3<u8>,
+        output_dir: PathBuf,
+    ) {
         use crate::viz;
         let environment = Arc::new(
             ort::Environment::builder()
@@ -296,9 +299,7 @@ mod tests {
         );
 
         let drive = GitHubRepository::new();
-        let model_path = drive
-            .get_model(crate::FaceDetection::BlazeFace640)
-            .expect("Can't download model");
+        let model_path = drive.get_model(blaze_model).expect("Can't download model");
 
         let face_detector = BlazeFace::from_file(
             environment,
@@ -318,5 +319,25 @@ mod tests {
         canvas
             .save(output_dir.join("blazefaces.png"))
             .expect("Can't save image");
+    }
+
+    #[rstest]
+    #[cfg(feature = "viz")]
+    fn should_detect_640(sample_array_image: Array3<u8>, output_dir: PathBuf) {
+        should_detect_impl(
+            crate::FaceDetection::BlazeFace640,
+            sample_array_image,
+            output_dir,
+        );
+    }
+
+    #[rstest]
+    #[cfg(feature = "viz")]
+    fn should_detect_320(sample_array_image: Array3<u8>, output_dir: PathBuf) {
+        should_detect_impl(
+            crate::FaceDetection::BlazeFace320,
+            sample_array_image,
+            output_dir,
+        );
     }
 }

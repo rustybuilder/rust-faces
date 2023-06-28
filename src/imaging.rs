@@ -45,6 +45,8 @@ impl ToRgb8 for Array3<u8> {
     }
 }
 
+/// Uses this trait to convert an image to an ndarray::Array3.
+/// Note that conversion must keep HxWxC order.
 pub trait ToArray3 {
     type Out;
 

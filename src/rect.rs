@@ -1,19 +1,26 @@
 use std::fmt::Display;
 
+/// Rectangle.
 #[derive(Debug, Clone, Copy)]
 pub struct Rect {
+    /// X coordinate of the top-left corner.
     pub x: f32,
+    /// Y coordinate of the top-left corner.
     pub y: f32,
+    /// Width of the rectangle.
     pub width: f32,
+    /// Height of the rectangle.
     pub height: f32,
 }
 
+/// Rectangle position used for chaining constructors.
 pub struct RectPosition {
     pub x: f32,
     pub y: f32,
 }
 
 impl RectPosition {
+    /// Makes a rectangle with the given size.
     pub fn with_size(&self, width: f32, height: f32) -> Rect {
         Rect {
             x: self.x,
@@ -23,6 +30,7 @@ impl RectPosition {
         }
     }
 
+    /// Makes a rectangle with the given end point.
     pub fn with_end(&self, x: f32, y: f32) -> Rect {
         Rect {
             x: self.x,
@@ -34,18 +42,30 @@ impl RectPosition {
 }
 
 impl Rect {
+    /// Starts a rectangle with the given position.
     pub fn at(x: f32, y: f32) -> RectPosition {
         RectPosition { x, y }
     }
 
+    /// Right end of the rectangle.
     pub fn right(&self) -> f32 {
         self.x + self.width
     }
 
+    /// Bottom end of the rectangle.
     pub fn bottom(&self) -> f32 {
         self.y + self.height
     }
 
+    /// Unites two rectangles.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `other` - Other rectangle to unite with.
+    /// 
+    /// # Returns
+    /// 
+    /// * `Rect` - United rectangle.
     pub fn union(&self, other: &Rect) -> Rect {
         let left = self.x.min(other.x);
         let right = self.right().max(other.right());
@@ -60,6 +80,15 @@ impl Rect {
         }
     }
 
+    /// Intersects two rectangles.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `other` - Other rectangle to intersect with.
+    /// 
+    /// # Returns
+    /// 
+    /// * `Rect` - Intersected rectangle.
     pub fn intersection(&self, other: &Rect) -> Rect {
         let left = self.x.max(other.x);
         let right = self.right().min(other.right());
@@ -74,6 +103,15 @@ impl Rect {
         }
     }
 
+    /// Calculates the intersection over union of two rectangles.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `other` - Other rectangle to calculate the intersection over union with.
+    /// 
+    /// # Returns
+    /// 
+    /// * `f32` - Intersection over union.
     pub fn iou(&self, other: &Rect) -> f32 {
         let left = self.x.max(other.x);
         let right = (self.right()).min(other.right());
@@ -87,7 +125,8 @@ impl Rect {
         intersection / (area_self + area_other - intersection)
     }
 
-    pub fn scale2d(&self, x_scale: f32, y_scale: f32) -> Rect {
+    /// Scales the rectangle.
+    pub fn scale(&self, x_scale: f32, y_scale: f32) -> Rect {
         Rect {
             x: self.x * x_scale,
             y: self.y * y_scale,
@@ -96,6 +135,7 @@ impl Rect {
         }
     }
 
+    /// Gets the rectangle as a tuple of (x, y, width, height).
     pub fn to_xywh(&self) -> (f32, f32, f32, f32) {
         (self.x, self.y, self.width, self.height)
     }

@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use crate::Face;
 
+/// Non-maximum suppression.
 #[derive(Copy, Clone, Debug)]
 pub struct Nms {
     pub iou_threshold: f32,
@@ -14,6 +15,15 @@ impl Default for Nms {
 }
 
 impl Nms {
+    /// Suppress non-maxima faces.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `faces` - Faces to suppress.
+    /// 
+    /// # Returns
+    /// 
+    /// * `Vec<Face>` - Suppressed faces.
     pub fn suppress_non_maxima(&self, mut faces: Vec<Face>) -> Vec<Face> {
         faces.sort_by(|a, b| a.confidence.partial_cmp(&b.confidence).unwrap());
 

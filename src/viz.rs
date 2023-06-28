@@ -9,6 +9,7 @@ impl From<Rect> for imageproc::rect::Rect {
     }
 }
 
+/// Draws faces on the image.
 pub fn draw_faces<I>(image: &mut I, faces: Vec<Face>)
 where
     I: GenericImage<Pixel = Rgb<u8>>,

@@ -68,7 +68,11 @@ impl ModelRepository for GitHubRepository {
         let (url, model_filename) = match face_detector {
             FaceDetection::BlazeFace640 => (
                 "https://github.com/rustybuilder/model-zoo/raw/main/face-detection/blazefaces-640.onnx",
-                "blaze-face-640.onnx",
+                "blazeface-640.onnx",
+            ),
+            FaceDetection::BlazeFace320 => (
+                "https://github.com/rustybuilder/model-zoo/raw/main/face-detection/blazeface-320.onnx",
+                "blazeface-320.onnx",
             ),
         };
 
