@@ -10,8 +10,8 @@ pub fn main() {
         .nms(Nms::default())
         .infer_params(InferParams {
             provider: Provider::OrtCpu,
-            cpu_cores: 5,
-            batch_size: 5,
+            intra_threads: Some(5),
+            ..Default::default()
         })
         .build()
         .expect("Fail to load the face detector.");

@@ -10,6 +10,7 @@ use rust_faces as rust;
 #[derive(Copy, Clone)]
 enum FaceDetection {
     BlazeFace640 = 0,
+    BlazeFace320 = 1,
 }
 
 #[pyclass]
@@ -62,6 +63,7 @@ fn build_detector(
 ) -> PyResult<FaceDetector> {
     let detection_method = match detection {
         FaceDetection::BlazeFace640 => rust::FaceDetection::BlazeFace640,
+        FaceDetection::BlazeFace320 => rust::FaceDetection::BlazeFace320,
     };
 
     let mut builder = rust::FaceDetectorBuilder::new(detection_method);

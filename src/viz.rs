@@ -9,12 +9,21 @@ impl From<Rect> for imageproc::rect::Rect {
     }
 }
 
+/// Draws faces on the image.
 pub fn draw_faces<I>(image: &mut I, faces: Vec<Face>)
 where
     I: GenericImage<Pixel = Rgb<u8>>,
 {
     for face in faces {
         imageproc::drawing::draw_hollow_rect_mut(image, face.rect.into(), Rgb([0, 255, 0]));
+        for lm in face.landmarks.unwrap_or_default() {
+            imageproc::drawing::draw_filled_circle_mut(
+                image,
+                (lm.0 as i32, lm.1 as i32),
+                2,
+                Rgb([255, 0, 0]),
+            );
+        }
     }
 }
 

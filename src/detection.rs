@@ -22,17 +22,28 @@ impl From<std::io::Error> for RustFacesError {
 
 pub type RustFacesResult<R> = Result<R, RustFacesError>;
 
+/// Face detection result.
 #[derive(Debug, Clone)]
 pub struct Face {
+    /// Face's bounding rectangle.
     pub rect: Rect,
+    /// Confidence of the detection.
     pub confidence: f32,
+    /// Landmarks of the face.
     pub landmarks: Option<Vec<(f32, f32)>>,
 }
 
+/// Face detector trait.
 pub trait FaceDetector: Sync + Send {
+    /// Detects faces in the given image.
+    ///
+    /// # Arguments
+    ///
+    /// * `image` - Image to detect faces in. Should be in RGB format.
     fn detect(&self, image: ArrayViewD<u8>) -> RustFacesResult<Vec<Face>>;
 }
 
+/// Face detection common parameters.
 #[derive(Debug, Copy, Clone)]
 pub struct DetectionParams {
     pub score_threshold: f32,
@@ -40,6 +51,9 @@ pub struct DetectionParams {
 }
 
 impl Default for DetectionParams {
+    /// Default parameters.
+    ///
+    /// Sets the score threshold to 0.95 and uses the default 0.3 as NMS threshold.
     fn default() -> Self {
         Self {
             score_threshold: 0.95,

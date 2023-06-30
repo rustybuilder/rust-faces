@@ -1,9 +1,11 @@
 use crate::builder::FaceDetection;
 use crate::detection::{RustFacesError, RustFacesResult};
+use indicatif::{ProgressBar, ProgressStyle};
 use reqwest::header::{HeaderMap, HeaderValue, ACCEPT};
 use std::fs::File;
 use std::io::BufWriter;
 use std::path::PathBuf;
+use std::time::Duration;
 
 pub trait ModelRepository {
     fn get_model(&self, face_detector: FaceDetection) -> RustFacesResult<PathBuf>;
@@ -16,6 +18,22 @@ fn download_file(url: &str, destination: &str) -> RustFacesResult<()> {
         headers
     }
 
+    let pb = ProgressBar::new_spinner();
+    pb.enable_steady_tick(Duration::from_millis(120));
+    pb.set_style(
+        ProgressStyle::with_template("{spinner:.blue} {msg}")
+            .unwrap()
+            .tick_strings(&[
+                "▹▹▹▹▹",
+                "▸▹▹▹▹",
+                "▹▸▹▹▹",
+                "▹▹▸▹▹",
+                "▹▹▹▸▹",
+                "▹▹▹▹▸",
+                "▪▪▪▪▪",
+            ]),
+    );
+    pb.set_message(format!("Downloading {url}"));
     let client = reqwest::blocking::Client::new();
     match client.get(url).headers(get_headers()).send() {
         Ok(mut response) => {
@@ -27,18 +45,23 @@ fn download_file(url: &str, destination: &str) -> RustFacesResult<()> {
                         break;
                     }
                 }
+                pb.finish_with_message("Done");
                 Ok(())
             } else {
+                pb.finish_with_message("Failed to download file.");
                 Err(RustFacesError::IoError(std::io::Error::new(
                     std::io::ErrorKind::Other,
                     "Failed to download file.",
                 )))
             }
         }
-        Err(err) => Err(RustFacesError::Other(format!(
-            "Failed to download file: {}",
-            err
-        ))),
+        Err(err) => {
+            pb.finish_with_message("Failed to download file.");
+            Err(RustFacesError::Other(format!(
+                "Failed to download file: {}",
+                err
+            )))
+        }
     }
 }
 
@@ -68,7 +91,11 @@ impl ModelRepository for GitHubRepository {
         let (url, model_filename) = match face_detector {
             FaceDetection::BlazeFace640 => (
                 "https://github.com/rustybuilder/model-zoo/raw/main/face-detection/blazefaces-640.onnx",
-                "blaze-face-640.onnx",
+                "blazeface-640.onnx",
+            ),
+            FaceDetection::BlazeFace320 => (
+                "https://github.com/rustybuilder/model-zoo/raw/main/face-detection/blazeface-320.onnx",
+                "blazeface-320.onnx",
             ),
         };
 
@@ -87,6 +114,18 @@ mod tests {
         builder::FaceDetection,
         model_repository::{GitHubRepository, ModelRepository},
     };
+
+    use super::download_file;
+
+    #[test]
+    #[ignore]
+    fn test_download() {
+        download_file(
+            "https://github.com/rustybuilder/model-zoo/raw/main/face-detection/blazeface-320.onnx",
+            "tests/output/sample_download",
+        )
+        .unwrap();
+    }
 
     #[test]
     fn test_google_drive_repository() {
