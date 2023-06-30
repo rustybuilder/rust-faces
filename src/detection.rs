@@ -36,9 +36,9 @@ pub struct Face {
 /// Face detector trait.
 pub trait FaceDetector: Sync + Send {
     /// Detects faces in the given image.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `image` - Image to detect faces in. Should be in RGB format.
     fn detect(&self, image: ArrayViewD<u8>) -> RustFacesResult<Vec<Face>>;
 }
@@ -52,7 +52,7 @@ pub struct DetectionParams {
 
 impl Default for DetectionParams {
     /// Default parameters.
-    /// 
+    ///
     /// Sets the score threshold to 0.95 and uses the default 0.3 as NMS threshold.
     fn default() -> Self {
         Self {

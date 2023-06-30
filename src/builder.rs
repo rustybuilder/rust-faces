@@ -58,9 +58,9 @@ pub struct FaceDetectorBuilder {
 
 impl FaceDetectorBuilder {
     /// Create a new builder for the given face detector.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `detector` - The face detector to build.
     pub fn new(detector: FaceDetection) -> Self {
         Self {

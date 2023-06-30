@@ -58,13 +58,13 @@ impl Rect {
     }
 
     /// Unites two rectangles.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `other` - Other rectangle to unite with.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * `Rect` - United rectangle.
     pub fn union(&self, other: &Rect) -> Rect {
         let left = self.x.min(other.x);
@@ -81,13 +81,13 @@ impl Rect {
     }
 
     /// Intersects two rectangles.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `other` - Other rectangle to intersect with.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * `Rect` - Intersected rectangle.
     pub fn intersection(&self, other: &Rect) -> Rect {
         let left = self.x.max(other.x);
@@ -104,13 +104,13 @@ impl Rect {
     }
 
     /// Calculates the intersection over union of two rectangles.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `other` - Other rectangle to calculate the intersection over union with.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * `f32` - Intersection over union.
     pub fn iou(&self, other: &Rect) -> f32 {
         let left = self.x.max(other.x);

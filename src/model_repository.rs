@@ -120,7 +120,11 @@ mod tests {
     #[test]
     #[ignore]
     fn test_download() {
-        download_file("https://github.com/rustybuilder/model-zoo/raw/main/face-detection/blazeface-320.onnx", "tests/output/sample_download").unwrap();
+        download_file(
+            "https://github.com/rustybuilder/model-zoo/raw/main/face-detection/blazeface-320.onnx",
+            "tests/output/sample_download",
+        )
+        .unwrap();
     }
 
     #[test]

@@ -82,7 +82,6 @@ struct PriorBoxes {
     variances: (f32, f32),
 }
 
-
 impl PriorBoxes {
     pub fn new(params: &PriorBoxesParams, image_size: (usize, usize)) -> Self {
         let feature_map_sizes: Vec<(usize, usize)> = params
@@ -129,7 +128,11 @@ impl PriorBoxes {
         Rect::at(x_start, y_start).with_end(width + x_start, height + y_start)
     }
 
-    pub fn decode_landmark(&self, prior: &(f32, f32, f32, f32), landmark: (f32, f32)) -> (f32, f32) {
+    pub fn decode_landmark(
+        &self,
+        prior: &(f32, f32, f32, f32),
+        landmark: (f32, f32),
+    ) -> (f32, f32) {
         let (anchor_cx, anchor_cy, s_kx, s_ky) = prior;
         let (x, y) = landmark;
         let x = anchor_cx + x * self.variances.0 * s_kx;
@@ -213,38 +216,42 @@ impl FaceDetector for BlazeFace {
 
         let scale_ratios = (input_width as f32 / ratio, input_height as f32 / ratio);
 
-        let faces = boxes.view()
-                .to_shape((num_boxes, 4))
-                .unwrap()
-                .axis_iter(Axis(0))
-            .zip(landmarks
-                .view()
-                .to_shape((num_boxes, 10))
-                .unwrap()
-                .axis_iter(Axis(0)))
+        let faces = boxes
+            .view()
+            .to_shape((num_boxes, 4))
+            .unwrap()
+            .axis_iter(Axis(0))
+            .zip(
+                landmarks
+                    .view()
+                    .to_shape((num_boxes, 10))
+                    .unwrap()
+                    .axis_iter(Axis(0)),
+            )
             .zip(priors.anchors.iter())
-            .zip(scores
-                .view()
-                .to_shape((num_boxes, 2))
-                .unwrap()
-                .axis_iter(Axis(0)))
+            .zip(
+                scores
+                    .view()
+                    .to_shape((num_boxes, 2))
+                    .unwrap()
+                    .axis_iter(Axis(0)),
+            )
             .filter_map(|(((rect, landmarks), prior), score)| {
                 let score = score[1];
 
                 if score > self.params.score_threshold {
-                    //let prior = (prior[0], prior[1], prior[2], prior[3]);
                     let rect = priors.decode_box(prior, &(rect[0], rect[1], rect[2], rect[3]));
                     let rect = rect.scale(scale_ratios.0, scale_ratios.1);
 
-                    let landmarks =  landmarks
+                    let landmarks = landmarks
                         .to_vec()
                         .chunks(2)
                         .map(|point| {
                             let point = priors.decode_landmark(prior, (point[0], point[1]));
                             (point.0 * scale_ratios.0, point.1 * scale_ratios.1)
-                        }
-                        ).collect::<Vec<_>>();
-                    
+                        })
+                        .collect::<Vec<_>>();
+
                     Some(Face {
                         rect,
                         landmarks: Some(landmarks),
@@ -253,10 +260,10 @@ impl FaceDetector for BlazeFace {
                 } else {
                     None
                 }
-            }).collect_vec();
+            })
+            .collect_vec();
 
-            Ok(self.params.nms.suppress_non_maxima(faces))
-        
+        Ok(self.params.nms.suppress_non_maxima(faces))
     }
 }
 
