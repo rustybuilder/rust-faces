@@ -18,6 +18,9 @@ pub mod testing;
 mod blazeface;
 pub use blazeface::BlazeFace;
 
+mod mtcnn;
+pub use mtcnn::Mtcnn;
+
 mod builder;
 
 #[cfg(feature = "viz")]
