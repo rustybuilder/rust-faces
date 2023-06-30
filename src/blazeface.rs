@@ -4,7 +4,7 @@ use image::{
     imageops::{self, FilterType},
     GenericImageView, ImageBuffer, Pixel, Rgb,
 };
-use itertools::iproduct;
+use itertools::{iproduct, Itertools};
 use ndarray::{Array3, ArrayViewD, Axis};
 use ort::tensor::{FromArray, OrtOwnedTensor};
 
@@ -78,9 +78,10 @@ impl Default for PriorBoxesParams {
 }
 
 struct PriorBoxes {
-    anchors: Vec<(f32, f32, f32, f32)>,
+    pub anchors: Vec<(f32, f32, f32, f32)>,
     variances: (f32, f32),
 }
+
 
 impl PriorBoxes {
     pub fn new(params: &PriorBoxesParams, image_size: (usize, usize)) -> Self {
@@ -115,23 +116,25 @@ impl PriorBoxes {
         }
     }
 
-    pub fn decode_boxes(&self, anchors_pred_locs: &[(f32, f32, f32, f32)]) -> Vec<Rect> {
-        anchors_pred_locs
-            .iter()
-            .zip(self.anchors.iter())
-            .map(|(rect, prior)| {
-                let (anchor_cx, anchor_cy, s_kx, s_ky) = prior;
-                let (x1, y1, x2, y2) = rect;
+    pub fn decode_box(&self, prior: &(f32, f32, f32, f32), pred: &(f32, f32, f32, f32)) -> Rect {
+        let (anchor_cx, anchor_cy, s_kx, s_ky) = prior;
+        let (x1, y1, x2, y2) = pred;
 
-                let cx = anchor_cx + x1 * self.variances.0 * s_kx;
-                let cy = anchor_cy + y1 * self.variances.0 * s_ky;
-                let width = s_kx * (x2 * self.variances.1).exp();
-                let height = s_ky * (y2 * self.variances.1).exp();
-                let x_start = cx - width / 2.0;
-                let y_start = cy - height / 2.0;
-                Rect::at(x_start, y_start).with_end(width + x_start, height + y_start)
-            })
-            .collect()
+        let cx = anchor_cx + x1 * self.variances.0 * s_kx;
+        let cy = anchor_cy + y1 * self.variances.0 * s_ky;
+        let width = s_kx * (x2 * self.variances.1).exp();
+        let height = s_ky * (y2 * self.variances.1).exp();
+        let x_start = cx - width / 2.0;
+        let y_start = cy - height / 2.0;
+        Rect::at(x_start, y_start).with_end(width + x_start, height + y_start)
+    }
+
+    pub fn decode_landmark(&self, prior: &(f32, f32, f32, f32), landmark: (f32, f32)) -> (f32, f32) {
+        let (anchor_cx, anchor_cy, s_kx, s_ky) = prior;
+        let (x, y) = landmark;
+        let x = anchor_cx + x * self.variances.0 * s_kx;
+        let y = anchor_cy + y * self.variances.0 * s_ky;
+        (x, y)
     }
 }
 
@@ -209,55 +212,51 @@ impl FaceDetector for BlazeFace {
         );
 
         let scale_ratios = (input_width as f32 / ratio, input_height as f32 / ratio);
-        Ok(self.params.nms.suppress_non_maxima(
-            priors
-                .decode_boxes(
-                    &boxes
-                        .view()
-                        .to_shape((num_boxes, 4))
-                        .unwrap()
-                        .axis_iter(Axis(0))
-                        .map(|rect| (rect[0], rect[1], rect[2], rect[3]))
-                        .collect::<Vec<_>>(),
-                )
-                .iter()
-                .zip(
-                    scores
-                        .view()
-                        .to_shape((num_boxes, 2))
-                        .unwrap()
-                        .axis_iter(Axis(0)),
-                )
-                .zip(
-                    landmarks
-                        .view()
-                        .to_shape((num_boxes, 10))
-                        .unwrap()
-                        .axis_iter(Axis(0)),
-                )
-                .filter_map(|((rect, score), landmarks)| {
-                    let score = score[1];
 
-                    if score > self.params.score_threshold {
-                        let rect = rect.scale(scale_ratios.0, scale_ratios.1);
-                        Some((rect, score, landmarks))
-                    } else {
-                        None
-                    }
-                })
-                .map(|(rect, confidence, landmarks)| Face {
-                    rect,
-                    confidence,
-                    landmarks: Some(
-                        landmarks
-                            .to_vec()
-                            .chunks(2)
-                            .map(|chunk| (chunk[0] * scale_ratios.0, chunk[1] * scale_ratios.1))
-                            .collect(),
-                    ),
-                })
-                .collect(),
-        ))
+        let faces = boxes.view()
+                .to_shape((num_boxes, 4))
+                .unwrap()
+                .axis_iter(Axis(0))
+            .zip(landmarks
+                .view()
+                .to_shape((num_boxes, 10))
+                .unwrap()
+                .axis_iter(Axis(0)))
+            .zip(priors.anchors.iter())
+            .zip(scores
+                .view()
+                .to_shape((num_boxes, 2))
+                .unwrap()
+                .axis_iter(Axis(0)))
+            .filter_map(|(((rect, landmarks), prior), score)| {
+                let score = score[1];
+
+                if score > self.params.score_threshold {
+                    //let prior = (prior[0], prior[1], prior[2], prior[3]);
+                    let rect = priors.decode_box(prior, &(rect[0], rect[1], rect[2], rect[3]));
+                    let rect = rect.scale(scale_ratios.0, scale_ratios.1);
+
+                    let landmarks =  landmarks
+                        .to_vec()
+                        .chunks(2)
+                        .map(|point| {
+                            let point = priors.decode_landmark(prior, (point[0], point[1]));
+                            (point.0 * scale_ratios.0, point.1 * scale_ratios.1)
+                        }
+                        ).collect::<Vec<_>>();
+                    
+                    Some(Face {
+                        rect,
+                        landmarks: Some(landmarks),
+                        confidence: score,
+                    })
+                } else {
+                    None
+                }
+            }).collect_vec();
+
+            Ok(self.params.nms.suppress_non_maxima(faces))
+        
     }
 }
 

@@ -16,6 +16,14 @@ where
 {
     for face in faces {
         imageproc::drawing::draw_hollow_rect_mut(image, face.rect.into(), Rgb([0, 255, 0]));
+        for lm in face.landmarks.unwrap_or_default() {
+            imageproc::drawing::draw_filled_circle_mut(
+                image,
+                (lm.0 as i32, lm.1 as i32),
+                2,
+                Rgb([255, 0, 0]),
+            );
+        }
     }
 }
 
