@@ -18,10 +18,10 @@ def main():
     args = parser.parse_args()
     detector = prf.build_detector(prf.FaceDetection.BlazeFace640)
     image = np.array(Image.open(args.image))
-    rects, _confidences, _landmarks = detector.detect(image)
+    rects, _confidences, landmarks = detector.detect(image)
 
     plt.imshow(image)
-    for rect in rects:
+    for rect, lms in zip(rects, landmarks):
         plt.gca().add_patch(
             Rectangle(
                 (rect[0], rect[1]),
@@ -32,6 +32,8 @@ def main():
                 lw=2,
             )
         )
+        plt.plot(lms[:, 0], lms[:, 1], "ro")
+        
     plt.show()
 
 if __name__ == "__main__":
