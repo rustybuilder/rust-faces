@@ -1,6 +1,6 @@
 use numpy::{
-    ndarray::{Array1, Array2},
-    IntoPyArray, PyArray1, PyArray2, PyReadonlyArrayDyn,
+    ndarray::{Array1, Array2, Array3},
+    IntoPyArray, PyArray1, PyArray2, PyArray3, PyReadonlyArrayDyn,
 };
 use pyo3::prelude::*;
 use rust::{DetectionParams, Nms};
@@ -24,15 +24,19 @@ impl FaceDetector {
         &self,
         py: Python<'py>,
         image: PyReadonlyArrayDyn<u8>,
-    ) -> (&'py PyArray2<f32>, &'py PyArray1<f32>, &'py PyArray2<f32>) {
+    ) -> (&'py PyArray2<f32>, &'py PyArray1<f32>, &'py PyArray3<f32>) {
         let array = image.as_array();
         let faces = self.detector.detect(array.view()).unwrap();
 
         let (rect_array, score_array, landmarks_array) = {
             let mut rect_array = Array2::zeros((faces.len(), 4));
             let mut score_array = Array1::zeros(faces.len());
-            // TODO: fill with landmarks
-            let landmarks_array = Array2::<f32>::zeros((faces.len(), 10));
+            let num_landmarks = faces
+                .first()
+                .map(|f| f.landmarks.as_ref().map(|lms| lms.len()).unwrap_or(0))
+                .unwrap_or(0);
+
+            let mut landmarks_array = Array3::<f32>::zeros((faces.len(), num_landmarks, 2));
             for i in 0..faces.len() {
                 let face = &faces[i];
                 rect_array[(i, 0)] = face.rect.x;
@@ -41,6 +45,13 @@ impl FaceDetector {
                 rect_array[(i, 3)] = face.rect.height;
 
                 score_array[i] = face.confidence;
+
+                if let Some(landmarks) = face.landmarks.as_ref() {
+                    for j in 0..num_landmarks {
+                        landmarks_array[(i, j, 0)] = landmarks[j].0;
+                        landmarks_array[(i, j, 1)] = landmarks[j].1;
+                    }
+                }
             }
             (rect_array, score_array, landmarks_array)
         };
