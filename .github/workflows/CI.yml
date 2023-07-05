@@ -43,7 +43,6 @@ jobs:
         run: cargo build --verbose --release
       - name: Copy Onnx Runtime
         run: |
-          mkdir -p target/release
           cp -r onnxruntime-win-x64-1.15.1/lib/*.dll target/release/deps
       - name: test
         run: cargo test --verbose --release --features viz
