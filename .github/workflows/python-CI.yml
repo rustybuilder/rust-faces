@@ -102,6 +102,7 @@ jobs:
         with:
           command: sdist
           args: --out dist
+          working-directory: python
       - name: Upload sdist
         uses: actions/upload-artifact@v3
         with:
