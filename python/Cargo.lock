@@ -1040,7 +1040,7 @@ dependencies = [
 
 [[package]]
 name = "py_rust_faces"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "image",
  "numpy",
@@ -1226,7 +1226,7 @@ dependencies = [
 
 [[package]]
 name = "rust-faces"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "home",
  "image",

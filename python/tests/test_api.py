@@ -15,8 +15,8 @@ def sample_image():
 
 
 def test_blazeface(sample_image):
-    detector = prf.build_detector(prf.FaceDetection.BlazeFace640)
+    detector = prf.build_detector(prf.FaceDetection.BlazeFace640, infer_provider=prf.InferProvider.OrtCpu)
     faces, scores, landmarks = detector.detect(sample_image)
     assert faces.shape == (5, 4)
     assert scores.shape == (5,)
-    assert landmarks.shape[0] == 5
+    assert landmarks.shape == (5, 5, 2)
