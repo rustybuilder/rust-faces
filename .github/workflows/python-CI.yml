@@ -21,10 +21,7 @@ permissions:
 jobs:
   linux:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        target: [x64, armv7, aarch64]
-    steps:
+    steps: 
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
