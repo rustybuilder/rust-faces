@@ -14,8 +14,7 @@ This project aims to provide a Rust interface for multiple state-of-the-art face
 
 The project aims to include a selection of popular and high-performing face detection models, such as:
 
-* [ ] RetinaFace
-* [ ] [BlazeFace](https://github.com/zineos/blazeface) - Only BlazeFace640
+* [x] [BlazeFace](https://github.com/zineos/blazeface) - BlazeFace640 and BlazeFace320
 * [ ] MTCNN (Multi-Task Cascaded Convolutional Networks)
 * [ ] EfficientDet
 
@@ -23,7 +22,12 @@ The project aims to include a selection of popular and high-performing face dete
 
 ## Usage
 
-As we are in early development 
+Linux Requirements:
+
+* libssl-dev
+* pkg-config
+
+Ubuntu: `$sudo apt install libssl-dev pkg-config`
 
 Install the crate:
 

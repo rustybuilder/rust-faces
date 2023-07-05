@@ -1,6 +1,6 @@
 [package]
 name = "rust-faces"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 authors = ["Rusty Builder <usty_builder@mail2world.com>"]
 description = "A Rust library for face detection"
@@ -26,8 +26,12 @@ viz = ["dep:imageproc"]
 
 [dev-dependencies]
 rstest = "0.17.0"
-cargo-make = "0.35.0"
+criterion = { version = "0.4", features = ["html_reports"] }
 
 [[test]]
 name = "should_have_smooth_design"
 path = "tests/should_have_smooth_design.rs"
+
+[[bench]]
+name = "blazeface"
+harness = false
