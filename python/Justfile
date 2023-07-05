@@ -1,0 +1,5 @@
+fmt:
+  cargo fmt --verbose --all -- --check
+
+clippy:
+  cargo clippy --verbose --all-targets --all-features -- -D warnings
