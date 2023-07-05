@@ -3,3 +3,4 @@ fmt:
 
 clippy:
   cargo clippy --verbose --all-targets --all-features -- -D warnings
+  
