@@ -1,5 +1,9 @@
 # Rust Faces - Face Detection Models with Rust Interface
 
+[![Rust](https://github.com/rustybuilder/rust-faces/actions/workflows/CI.yml/badge.svg)](https://github.com/rustybuilder/rust-faces/actions/workflows/CI.yml)
+
+[![Python](https://github.com/rustybuilder/rust-faces/actions/workflows/python-CI.yml/badge.svg)](https://github.com/rustybuilder/rust-faces/actions/workflows/python-CI.yml)
+
 This project aims to provide a Rust interface for multiple state-of-the-art face detection models. 
 
 ## Features
