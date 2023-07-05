@@ -10,10 +10,8 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
-
+  build-check:
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v3
     - name: Build
@@ -24,3 +22,43 @@ jobs:
       run: cargo fmt --verbose --all -- --check
     - name: Run clippy
       run: cargo clippy --verbose --all-targets --all-features -- -D warnings
+  
+  windows:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        target: [x64]
+    steps:
+      - uses: actions/checkout@v3
+      - name: Download Onnx Runtime
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri https://github.com/microsoft/onnxruntime/releases/download/v1.15.1/onnxruntime-win-x64-1.15.1.zip -OutFile onnxruntime-win-x64-1.15.1.zip
+          Expand-Archive -Path onnxruntime-win-x64-1.15.1.zip -DestinationPath .
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      - name: Build
+        run: cargo build --verbose --release
+      - name: Copy Onnx Runtime
+        run: |
+          cp -r onnxruntime-win-x64-1.15.1/lib/*.dll target/release/deps
+      - name: test
+        run: cargo test --verbose --release --features viz
+
+  macos:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        target: [x86_64, aarch64]
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      - name: Build
+        run: cargo build --verbose --release
+      - name: test
+        run: cargo test --verbose --release --features viz
