@@ -125,7 +125,7 @@ impl PriorBoxes {
         let height = s_ky * (y2 * self.variances.1).exp();
         let x_start = cx - width / 2.0;
         let y_start = cy - height / 2.0;
-        Rect::at(x_start, y_start).with_end(width + x_start, height + y_start)
+        Rect::at(x_start, y_start).ending_at(width + x_start, height + y_start)
     }
 
     pub fn decode_landmark(
@@ -305,7 +305,7 @@ mod tests {
         );
 
         let drive = GitHubRepository::new();
-        let model_path = drive.get_model(blaze_model).expect("Can't download model");
+        let model_path = drive.get_model(blaze_model).expect("Can't download model")[0].clone();
 
         let face_detector = BlazeFace::from_file(
             environment,

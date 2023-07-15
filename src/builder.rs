@@ -5,13 +5,14 @@ use ort::ExecutionProvider;
 use crate::{
     detection::{DetectionParams, FaceDetector, RustFacesResult},
     model_repository::{GitHubRepository, ModelRepository},
-    BlazeFace, Nms,
+    BlazeFace, Nms, MtCnn, MtCnnParams,
 };
 
 #[derive(Clone, Copy, Debug)]
 pub enum FaceDetection {
     BlazeFace640 = 0,
     BlazeFace320 = 1,
+    MtCnn = 2
 }
 
 #[derive(Clone, Debug)]
@@ -127,19 +128,46 @@ impl FaceDetectorBuilder {
         let env = Arc::new(ort_builder.build()?);
         let repository = GitHubRepository::new();
 
-        let model_path = match &self.open_mode {
+        let model_paths = match &self.open_mode {
             OpenMode::Download => repository
                 .get_model(self.detector)?
-                .to_str()
-                .unwrap()
-                .to_string(),
-            OpenMode::File(path) => path.clone(),
+                .iter()
+                .map(|path| path.to_str().unwrap().to_string())
+                .collect(),
+            OpenMode::File(path) => vec![path.clone()],
         };
 
-        Ok(Box::new(match self.detector {
-            FaceDetection::BlazeFace640 => BlazeFace::from_file(env, &model_path, self.params),
-            FaceDetection::BlazeFace320 => BlazeFace::from_file(env, &model_path, self.params),
-        }))
+        match self.detector {
+            FaceDetection::BlazeFace640 => {
+                return Ok(Box::new(BlazeFace::from_file(
+                    env,
+                    &model_paths[0],
+                    self.params,
+                )))
+            }
+            FaceDetection::BlazeFace320 => {
+                return Ok(Box::new(BlazeFace::from_file(
+                    env,
+                    &model_paths[0],
+                    self.params,
+                )))
+            }
+            FaceDetection::MtCnn => {
+                return Ok(Box::new(
+                    MtCnn::from_file(
+                        env,
+                        &model_paths[0],
+                        &model_paths[1],
+                        &model_paths[2],
+                        MtCnnParams {
+                            common: self.params,
+                            ..Default::default()
+                        }
+                    )
+                    .unwrap(),
+                ))
+            }
+        }
     }
 }
 

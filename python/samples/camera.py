@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import argparse
 
 import cv2
@@ -16,7 +17,7 @@ def main():
     args = parser.parse_args()
 
     detector = prf.build_detector(
-        prf.FaceDetection.BlazeFace640, infer_provider=prf.InferProvider.OrtCuda
+        prf.FaceDetection.MtCnn, infer_provider=prf.InferProvider.OrtCuda
     )
 
     capture = cv2.VideoCapture(args.camera)

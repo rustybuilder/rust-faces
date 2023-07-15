@@ -8,7 +8,7 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 pub trait ModelRepository {
-    fn get_model(&self, face_detector: FaceDetection) -> RustFacesResult<PathBuf>;
+    fn get_model(&self, face_detector: FaceDetection) -> RustFacesResult<Vec<PathBuf>>;
 }
 
 fn download_file(url: &str, destination: &str) -> RustFacesResult<()> {
@@ -87,24 +87,34 @@ impl GitHubRepository {
 }
 
 impl ModelRepository for GitHubRepository {
-    fn get_model(&self, face_detector: FaceDetection) -> RustFacesResult<PathBuf> {
-        let (url, model_filename) = match face_detector {
+    fn get_model(&self, face_detector: FaceDetection) -> RustFacesResult<Vec<PathBuf>> {
+        let (urls, filenames) = match face_detector {
             FaceDetection::BlazeFace640 => (
-                "https://github.com/rustybuilder/model-zoo/raw/main/face-detection/blazefaces-640.onnx",
-                "blazeface-640.onnx",
+                ["https://github.com/rustybuilder/model-zoo/raw/main/face-detection/blazefaces-640.onnx"].as_slice(),
+                ["blazeface-640.onnx"].as_slice(),
             ),
             FaceDetection::BlazeFace320 => (
-                "https://github.com/rustybuilder/model-zoo/raw/main/face-detection/blazeface-320.onnx",
-                "blazeface-320.onnx",
+                ["https://github.com/rustybuilder/model-zoo/raw/main/face-detection/blazeface-320.onnx"].as_slice(),
+                ["blazeface-320.onnx"].as_slice(),
             ),
+            FaceDetection::MtCnn => (
+                ["https://github.com/rustybuilder/model-zoo/raw/main/face-detection/mtcnn-pnet.onnx",
+                "https://github.com/rustybuilder/model-zoo/raw/main/face-detection/mtcnn-rnet.onnx",
+                "https://github.com/rustybuilder/model-zoo/raw/main/face-detection/mtcnn-onet.onnx"].as_slice(),
+                ["mtcnn-pnet.onnx", "mtcnn-rnet.onnx", "mtcnn-onet.onnx"].as_slice(),
+            )
         };
 
-        let dest_filepath = get_cache_dir()?.join(model_filename);
-        if !dest_filepath.exists() {
-            download_file(url, dest_filepath.to_str().unwrap())?;
+        let mut result = Vec::new();
+        for (url, filename) in urls.iter().zip(filenames) {
+            let dest_filepath = get_cache_dir()?.join(filename);
+            if !dest_filepath.exists() {
+                download_file(url, dest_filepath.to_str().unwrap())?;
+            }
+            result.push(dest_filepath);
         }
 
-        Ok(dest_filepath)
+        Ok(result)
     }
 }
 
@@ -130,7 +140,7 @@ mod tests {
     #[test]
     fn test_google_drive_repository() {
         let repo = GitHubRepository {};
-        let model_path = repo.get_model(FaceDetection::BlazeFace640).unwrap();
+        let model_path = repo.get_model(FaceDetection::BlazeFace640).expect("Failed to get model")[0].clone();
         assert!(model_path.exists());
     }
 }

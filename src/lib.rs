@@ -19,7 +19,7 @@ mod blazeface;
 pub use blazeface::BlazeFace;
 
 mod mtcnn;
-pub use mtcnn::Mtcnn;
+pub use mtcnn::{MtCnn, MtCnnParams};
 
 mod builder;
 
