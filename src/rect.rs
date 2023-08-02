@@ -93,7 +93,28 @@ impl Rect {
         let left = self.x.max(other.x);
         let right = self.right().min(other.right());
         let top = self.y.max(other.y);
-        let bottom = (self.bottom()).min(other.bottom());
+        let bottom = self.bottom().min(other.bottom());
+
+        Rect {
+            x: left,
+            y: top,
+            width: right - left,
+            height: bottom - top,
+        }
+    }
+
+    /// Clamps the rectangle to the given rect.
+    /// If the rectangle is larger than the given size, it will be shrunk.
+    ///
+    /// # Arguments
+    ///
+    /// * `width` - Width to clamp to.
+    /// * `height` - Height to clamp to.
+    pub fn clamp(&self, width: f32, height: f32) -> Rect {
+        let left = self.x.max(0.0);
+        let right = self.right().min(width);
+        let top = self.y.max(0.0);
+        let bottom = self.bottom().min(height);
 
         Rect {
             x: left,

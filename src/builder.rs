@@ -3,16 +3,16 @@ use std::sync::Arc;
 use ort::ExecutionProvider;
 
 use crate::{
-    detection::{DetectionParams, FaceDetector, RustFacesResult},
+    blazeface::BlazeFaceParams,
+    detection::{FaceDetector, RustFacesResult},
     model_repository::{GitHubRepository, ModelRepository},
-    BlazeFace, Nms, MtCnn, MtCnnParams,
+    BlazeFace, MtCnn, MtCnnParams,
 };
 
-#[derive(Clone, Copy, Debug)]
 pub enum FaceDetection {
-    BlazeFace640 = 0,
-    BlazeFace320 = 1,
-    MtCnn = 2
+    BlazeFace640(BlazeFaceParams),
+    BlazeFace320(BlazeFaceParams),
+    MtCnn(MtCnnParams),
 }
 
 #[derive(Clone, Debug)]
@@ -21,7 +21,7 @@ enum OpenMode {
     Download,
 }
 
-/// Runtime inference provider. May not be available depending of your Onnx runtime installation.
+/// Runtime inference provider. Some may not be available depending of your Onnx runtime installation.
 #[derive(Clone, Copy, Debug)]
 pub enum Provider {
     /// Uses the, default, CPU inference
@@ -45,6 +45,7 @@ pub struct InferParams {
 }
 
 impl Default for InferParams {
+    /// Default provider is `OrtCpu` (Onnx CPU).
     fn default() -> Self {
         Self {
             provider: Provider::OrtCpu,
@@ -54,11 +55,10 @@ impl Default for InferParams {
     }
 }
 
-/// Builder for loading or downloading and creating face detectors.
+/// Builder for loading or downloading, configuring, and creating face detectors.
 pub struct FaceDetectorBuilder {
     detector: FaceDetection,
     open_mode: OpenMode,
-    params: DetectionParams,
     infer_params: InferParams,
 }
 
@@ -72,32 +72,23 @@ impl FaceDetectorBuilder {
         Self {
             detector,
             open_mode: OpenMode::Download,
-            params: DetectionParams::default(),
             infer_params: InferParams::default(),
         }
     }
 
     /// Load the model from the given file path.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - Path to the model file.
     pub fn from_file(mut self, path: String) -> Self {
         self.open_mode = OpenMode::File(path);
         self
     }
 
-    /// Download the model from the model repository.
+    /// Sets the model to be downloaded from the model repository.
     pub fn download(mut self) -> Self {
         self.open_mode = OpenMode::Download;
-        self
-    }
-
-    /// Set the detection parameters.
-    pub fn detect_params(mut self, params: DetectionParams) -> Self {
-        self.params = params;
-        self
-    }
-
-    /// Set the non-maximum suppression.
-    pub fn nms(mut self, nms: Nms) -> Self {
-        self.params.nms = nms;
         self
     }
 
@@ -107,7 +98,15 @@ impl FaceDetectorBuilder {
         self
     }
 
-    /// Builds a new detector.
+    /// Instantiates a new detector.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the model can't be loaded.
+    ///
+    /// # Returns
+    ///
+    /// A new face detector.
     pub fn build(&self) -> RustFacesResult<Box<dyn FaceDetector>> {
         let mut ort_builder = ort::Environment::builder().with_name("RustFaces");
 
@@ -130,43 +129,34 @@ impl FaceDetectorBuilder {
 
         let model_paths = match &self.open_mode {
             OpenMode::Download => repository
-                .get_model(self.detector)?
+                .get_model(&self.detector)?
                 .iter()
                 .map(|path| path.to_str().unwrap().to_string())
                 .collect(),
             OpenMode::File(path) => vec![path.clone()],
         };
 
-        match self.detector {
-            FaceDetection::BlazeFace640 => {
-                return Ok(Box::new(BlazeFace::from_file(
+        match &self.detector {
+            FaceDetection::BlazeFace640(params) => Ok(Box::new(BlazeFace::from_file(
+                env,
+                &model_paths[0],
+                params.clone(),
+            ))),
+            FaceDetection::BlazeFace320(params) => Ok(Box::new(BlazeFace::from_file(
+                env,
+                &model_paths[0],
+                params.clone(),
+            ))),
+            FaceDetection::MtCnn(params) => Ok(Box::new(
+                MtCnn::from_file(
                     env,
                     &model_paths[0],
-                    self.params,
-                )))
-            }
-            FaceDetection::BlazeFace320 => {
-                return Ok(Box::new(BlazeFace::from_file(
-                    env,
-                    &model_paths[0],
-                    self.params,
-                )))
-            }
-            FaceDetection::MtCnn => {
-                return Ok(Box::new(
-                    MtCnn::from_file(
-                        env,
-                        &model_paths[0],
-                        &model_paths[1],
-                        &model_paths[2],
-                        MtCnnParams {
-                            common: self.params,
-                            ..Default::default()
-                        }
-                    )
-                    .unwrap(),
-                ))
-            }
+                    &model_paths[1],
+                    &model_paths[2],
+                    params.clone(),
+                )
+                .unwrap(),
+            )),
         }
     }
 }

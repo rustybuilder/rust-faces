@@ -7,14 +7,19 @@ use image::{
 use ndarray::{s, Array3, Array4, ArrayViewD, Axis, Zip};
 use ort::tensor::{FromArray, OrtOwnedTensor};
 
-use crate::{DetectionParams, Face, FaceDetector, Rect, RustFacesResult};
+use crate::{Face, FaceDetector, Nms, Rect, RustFacesResult};
 
-#[derive(Copy, Clone, Debug)]
+/// MtCnn parameters.
+#[derive(Clone)]
 pub struct MtCnnParams {
+    /// Minimum face size in pixels.
     pub min_face_size: usize,
+    /// Confidence thresholds for each stage.
     pub thresholds: [f32; 3],
+    /// Scale factor for the next pyramid image.
     pub scale_factor: f32,
-    pub common: DetectionParams,
+    /// Non-maximum suppression.
+    pub nms: Nms,
 }
 
 impl Default for MtCnnParams {
@@ -23,11 +28,12 @@ impl Default for MtCnnParams {
             min_face_size: 24,
             thresholds: [0.6, 0.7, 0.7],
             scale_factor: 0.709,
-            common: DetectionParams::default(),
+            nms: Nms::default(),
         }
     }
 }
 
+/// MtCnn face detector.
 pub struct MtCnn {
     pnet: ort::Session,
     rnet: ort::Session,
@@ -36,6 +42,18 @@ pub struct MtCnn {
 }
 
 impl MtCnn {
+    /// Creates a new MtCnn face detector from the given ONNX model paths.
+    ///
+    /// # Arguments
+    ///
+    /// * `pnet_path` - Path to the P(roposal)Net ONNX model.
+    /// * `rnet_path` - Path to the R(efine)Net ONNX model.
+    /// * `onet_path` - Path to the O(ptimize)Net ONNX model.
+    /// * `params` - MtCnn parameters.
+    ///
+    /// # Returns
+    ///
+    /// * `MtCnn` - MtCnn face detector.
     pub fn from_file(
         env: Arc<ort::Environment>,
         pnet_path: &str,
@@ -112,6 +130,7 @@ impl MtCnn {
 
             let rescale_factor = 1.0 / scale_factor;
             let mut faces = Vec::with_capacity(net_out_width * net_out_height);
+
             Zip::indexed(
                 scores
                     .view()
@@ -146,77 +165,96 @@ impl MtCnn {
                 }
             });
 
-            face_proposals.extend(self.params.common.nms.suppress_non_maxima(faces));
+            face_proposals.extend(self.params.nms.suppress_non_maxima(faces));
         }
-        let mut proposals = self.params.common.nms.suppress_non_maxima(face_proposals);
-        let image_rect = Rect::at(0.0, 0.0).ending_at(image_width as f32, image_height as f32);
+        let mut proposals = self.params.nms.suppress_non_maxima(face_proposals);
         proposals.iter_mut().for_each(|face| {
-            face.rect = face.rect.intersection(&image_rect);
+            face.rect = face.rect.clamp(image_width as f32, image_height as f32);
         });
         Ok(proposals)
     }
 
-    fn run_face_inference(
+    fn batch_faces<'a>(
         &self,
-        network: &ort::Session,
-        proposals: Vec<Face>,
-        image: &ImageBuffer<Rgb<u8>, &[u8]>,
-        threshold: f32,
+        image: &'a ImageBuffer<Rgb<u8>, &[u8]>,
+        proposals: &'a [Face],
         input_size: usize,
-    ) -> Result<Vec<Face>, crate::RustFacesError> {
+    ) -> impl Iterator<Item = (&'a [Face], Array4<f32>)> + 'a {
         const BATCH_SIZE: usize = 16;
-
-        let mut rnet_faces = Vec::new();
-        for proposal_batch in proposals.chunks(BATCH_SIZE) {
+        proposals.chunks(BATCH_SIZE).map(move |proposal_batch| {
             let mut input_tensor = Array4::zeros((proposal_batch.len(), 3, input_size, input_size));
             for (n, face) in proposal_batch.iter().enumerate() {
                 let face_image =
                     RgbImage::from_fn(face.rect.width as u32, face.rect.height as u32, |x, y| {
-                        image.get_pixel(face.rect.x as u32 + x as u32, face.rect.y as u32 + y as u32).to_owned()
+                        image
+                            .get_pixel(face.rect.x as u32 + x, face.rect.y as u32 + y)
+                            .to_owned()
                     });
-                let face_image = imageops::resize(&face_image, input_size as u32, input_size as u32, FilterType::Gaussian);
+                let face_image = imageops::resize(
+                    &face_image,
+                    input_size as u32,
+                    input_size as u32,
+                    FilterType::Gaussian,
+                );
                 input_tensor
                     .slice_mut(s![n, .., .., ..])
-                    .assign(&Array3::from_shape_fn((3, input_size, input_size), |(c, h, w)| {
-                        (face_image.get_pixel(w as u32, h as u32)[c] as f32 - 127.5) / 128.0
-                    }));
+                    .assign(&Array3::from_shape_fn(
+                        (3, input_size, input_size),
+                        |(c, h, w)| {
+                            (face_image.get_pixel(w as u32, h as u32)[c] as f32 - 127.5) / 128.0
+                        },
+                    ));
             }
+            (proposal_batch, input_tensor)
+        })
+    }
 
-            let output_tensors = network.run(vec![ort::tensor::InputTensor::from_array(
+    fn run_refine_net(
+        &self,
+        image: &ImageBuffer<Rgb<u8>, &[u8]>,
+        proposals: &[Face],
+    ) -> Result<Vec<Face>, crate::RustFacesError> {
+        let mut rnet_faces = Vec::new();
+        for (faces, input_tensor) in self.batch_faces(image, proposals, 24) {
+            let output_tensors = self.rnet.run(vec![ort::tensor::InputTensor::from_array(
                 input_tensor.into_dyn(),
             )])?;
             let box_regressions: OrtOwnedTensor<f32, _> = output_tensors[0].try_extract()?;
             let scores: OrtOwnedTensor<f32, _> = output_tensors[1].try_extract()?;
+            let image_width = (image.width() - 1) as f32;
+            let image_height = (image.height() - 1) as f32;
 
             let batch_faces = itertools::izip!(
-                proposal_batch.iter(),
+                faces.iter(),
                 scores
                     .view()
-                    .to_shape((proposal_batch.len(), 2))
+                    .to_shape((faces.len(), 2))
                     .unwrap()
                     .lanes(Axis(1))
                     .into_iter(),
                 box_regressions
                     .view()
-                    .to_shape((proposal_batch.len(), 4))
+                    .to_shape((faces.len(), 4))
                     .unwrap()
                     .lanes(Axis(1))
                     .into_iter()
             )
             .filter_map(|(face, score, regression)| {
                 let score = score[1];
-                if score >= threshold {
-                    let width = face.rect.width;
-                    let height = face.rect.height;
+                if score >= self.params.thresholds[1] {
+                    let face_width = face.rect.width;
+                    let face_height = face.rect.height;
                     let regression = regression.to_vec();
 
-                    let x1 = face.rect.x + regression[0] * width;
-                    let y1 = face.rect.y + regression[1] * height;
-                    let x2 = face.rect.right() + regression[2] * width;
-                    let y2 = face.rect.bottom() + regression[3] * height;
+                    let x1 = face.rect.x + regression[0] * face_width;
+                    let y1 = face.rect.y + regression[1] * face_height;
+                    let x2 = face.rect.right() + regression[2] * face_width;
+                    let y2 = face.rect.bottom() + regression[3] * face_height;
 
                     Some(Face {
-                        rect: Rect::at(x1, y1).ending_at(x2, y2),
+                        rect: Rect::at(x1, y1)
+                            .ending_at(x2, y2)
+                            .clamp(image_width, image_height),
                         confidence: score,
                         landmarks: None,
                     })
@@ -228,7 +266,85 @@ impl MtCnn {
 
             rnet_faces.extend(batch_faces);
         }
-        let boxes = self.params.common.nms.suppress_non_maxima_min(rnet_faces);
+        let boxes = self.params.nms.suppress_non_maxima_min(rnet_faces);
+        Ok(boxes)
+    }
+
+    fn run_optmized_net(
+        &self,
+        image: &ImageBuffer<Rgb<u8>, &[u8]>,
+        proposals: &[Face],
+    ) -> Result<Vec<Face>, crate::RustFacesError> {
+        let mut onet_faces = Vec::new();
+        for (faces, input_tensor) in self.batch_faces(image, proposals, 48) {
+            let output_tensors = self.onet.run(vec![ort::tensor::InputTensor::from_array(
+                input_tensor.into_dyn(),
+            )])?;
+
+            let box_regressions: OrtOwnedTensor<f32, _> = output_tensors[0].try_extract()?; // 0
+            let landmarks_regressions: OrtOwnedTensor<f32, _> = output_tensors[1].try_extract()?;
+            let scores: OrtOwnedTensor<f32, _> = output_tensors[2].try_extract()?; // 1
+            let image_width = (image.width() - 1) as f32;
+            let image_height = (image.height() - 1) as f32;
+
+            let batch_faces = itertools::izip!(
+                faces.iter(),
+                scores
+                    .view()
+                    .to_shape((faces.len(), 2))
+                    .unwrap()
+                    .lanes(Axis(1))
+                    .into_iter(),
+                box_regressions
+                    .view()
+                    .to_shape((faces.len(), 4))
+                    .unwrap()
+                    .lanes(Axis(1))
+                    .into_iter(),
+                landmarks_regressions
+                    .view()
+                    .to_shape((faces.len(), 10))
+                    .unwrap()
+                    .lanes(Axis(1))
+                    .into_iter()
+            )
+            .filter_map(|(face, score, regression, landmarks)| {
+                let score = score[1];
+                if score >= self.params.thresholds[1] {
+                    let face_width = face.rect.width;
+                    let face_height = face.rect.height;
+                    let regression = regression.to_vec();
+
+                    let x1 = face.rect.x + regression[0] * face_width;
+                    let y1 = face.rect.y + regression[1] * face_height;
+                    let x2 = face.rect.right() + regression[2] * face_width;
+                    let y2 = face.rect.bottom() + regression[3] * face_height;
+
+                    let rect = Rect::at(x1, y1)
+                        .ending_at(x2, y2)
+                        .clamp(image_width, image_height);
+                    let mut landmarks_vec = Vec::new();
+
+                    for i in 0..5 {
+                        landmarks_vec.push((
+                            face.rect.x + landmarks[i] * face_width,
+                            face.rect.y + landmarks[i + 5] * face_height,
+                        ));
+                    }
+                    Some(Face {
+                        rect,
+                        confidence: score,
+                        landmarks: Some(landmarks_vec),
+                    })
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
+
+            onet_faces.extend(batch_faces);
+        }
+        let boxes = self.params.nms.suppress_non_maxima_min(onet_faces);
         Ok(boxes)
     }
 }
@@ -245,9 +361,9 @@ impl FaceDetector for MtCnn {
         .unwrap();
 
         let proposals = self.run_proposal_inference(&image)?;
-        let refined_faces = self.run_face_inference(&self.rnet, proposals.clone(), &image, self.params.thresholds[1], 24)?;
-        // let optimized_faces = self.run_face_inference(&self.onet, refined_faces.clone(), &image, self.params.thresholds[2], 48)?;
-        Ok(refined_faces)
+        let refined_faces = self.run_refine_net(&image, &proposals)?;
+        let optimized_faces = self.run_optmized_net(&image, &refined_faces)?;
+        Ok(optimized_faces)
     }
 }
 
@@ -270,6 +386,8 @@ mod tests {
     #[cfg(feature = "viz")]
     #[rstest]
     fn should_detect(sample_array_image: Array3<u8>, output_dir: PathBuf) {
+        use crate::FaceDetection;
+
         let environment = Arc::new(
             ort::Environment::builder()
                 .with_name("MtCnn")
@@ -279,7 +397,7 @@ mod tests {
 
         let drive = GitHubRepository::new();
         let model_paths = drive
-            .get_model(crate::FaceDetection::MtCnn)
+            .get_model(&FaceDetection::MtCnn(MtCnnParams::default()))
             .expect("Can't download model");
 
         let face_detector = MtCnn::from_file(

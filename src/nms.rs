@@ -46,7 +46,7 @@ impl Nms {
         nms_faces
     }
 
-        /// Suppress non-maxima faces.
+    /// Suppress non-maxima faces.
     ///
     /// # Arguments
     ///

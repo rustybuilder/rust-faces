@@ -19,8 +19,7 @@ This project aims to provide a Rust interface for multiple state-of-the-art face
 The project aims to include a selection of popular and high-performing face detection models, such as:
 
 * [x] [BlazeFace](https://github.com/zineos/blazeface) - BlazeFace640 and BlazeFace320
-* [ ] MTCNN (Multi-Task Cascaded Convolutional Networks)
-* [ ] EfficientDet
+* [x] MTCNN (Multi-Task Cascaded Convolutional Networks)
 
 **Please note that the availability of specific models may vary depending on the licensing terms and open-source availability of the respective models.**
 
@@ -101,7 +100,7 @@ More details on the [Ort](https://github.com/pykeio/ort) project.
 
 
 ```shell
-$ pip install -e "git+https://github.com/rustybuilder/rust-faces.git#egg=py-rust-faces&subdirectory=python"
+$ pip install -e "git+https://github.com/rustybuilder/rust-faces.git#egg=py-rust-faces&subdirectory=python" --install-option="--release"
 ```
 
 Usage:
@@ -114,7 +113,7 @@ from matplotlib.patches import Rectangle
 
 import py_rust_faces as prf
 
-detector = prf.build_detector(prf.FaceDetection.BlazeFace640)
+detector = prf.blazeface(prf.BlazeFace.Net320)
 image = np.array(Image.open(args.image))
 rects, _confidences, _landmarks = detector.detect(image)
 plt.imshow(image)

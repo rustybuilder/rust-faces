@@ -8,7 +8,7 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 pub trait ModelRepository {
-    fn get_model(&self, face_detector: FaceDetection) -> RustFacesResult<Vec<PathBuf>>;
+    fn get_model(&self, face_detector: &FaceDetection) -> RustFacesResult<Vec<PathBuf>>;
 }
 
 fn download_file(url: &str, destination: &str) -> RustFacesResult<()> {
@@ -87,17 +87,17 @@ impl GitHubRepository {
 }
 
 impl ModelRepository for GitHubRepository {
-    fn get_model(&self, face_detector: FaceDetection) -> RustFacesResult<Vec<PathBuf>> {
+    fn get_model(&self, face_detector: &FaceDetection) -> RustFacesResult<Vec<PathBuf>> {
         let (urls, filenames) = match face_detector {
-            FaceDetection::BlazeFace640 => (
+            FaceDetection::BlazeFace640(_) => (
                 ["https://github.com/rustybuilder/model-zoo/raw/main/face-detection/blazefaces-640.onnx"].as_slice(),
                 ["blazeface-640.onnx"].as_slice(),
             ),
-            FaceDetection::BlazeFace320 => (
+            FaceDetection::BlazeFace320(_) => (
                 ["https://github.com/rustybuilder/model-zoo/raw/main/face-detection/blazeface-320.onnx"].as_slice(),
                 ["blazeface-320.onnx"].as_slice(),
             ),
-            FaceDetection::MtCnn => (
+            FaceDetection::MtCnn(_) => (
                 ["https://github.com/rustybuilder/model-zoo/raw/main/face-detection/mtcnn-pnet.onnx",
                 "https://github.com/rustybuilder/model-zoo/raw/main/face-detection/mtcnn-rnet.onnx",
                 "https://github.com/rustybuilder/model-zoo/raw/main/face-detection/mtcnn-onet.onnx"].as_slice(),
@@ -121,6 +121,7 @@ impl ModelRepository for GitHubRepository {
 #[cfg(test)]
 mod tests {
     use crate::{
+        blazeface::BlazeFaceParams,
         builder::FaceDetection,
         model_repository::{GitHubRepository, ModelRepository},
     };
@@ -140,7 +141,10 @@ mod tests {
     #[test]
     fn test_google_drive_repository() {
         let repo = GitHubRepository {};
-        let model_path = repo.get_model(FaceDetection::BlazeFace640).expect("Failed to get model")[0].clone();
+        let model_path = repo
+            .get_model(&FaceDetection::BlazeFace640(BlazeFaceParams::default()))
+            .expect("Failed to get model")[0]
+            .clone();
         assert!(model_path.exists());
     }
 }

@@ -1,20 +1,19 @@
 use rust_faces::{
-    viz, DetectionParams, FaceDetection, FaceDetectorBuilder, InferParams, Nms, Provider, ToArray3,
+    viz, BlazeFaceParams, FaceDetection, FaceDetectorBuilder, InferParams, Provider, ToArray3,
     ToRgb8,
 };
 
 pub fn main() {
-    let face_detector = FaceDetectorBuilder::new(FaceDetection::BlazeFace640)
-        .download()
-        .detect_params(DetectionParams::default())
-        .nms(Nms::default())
-        .infer_params(InferParams {
-            provider: Provider::OrtCpu,
-            intra_threads: Some(5),
-            ..Default::default()
-        })
-        .build()
-        .expect("Fail to load the face detector.");
+    let face_detector =
+        FaceDetectorBuilder::new(FaceDetection::BlazeFace640(BlazeFaceParams::default()))
+            .download()
+            .infer_params(InferParams {
+                provider: Provider::OrtCpu,
+                intra_threads: Some(5),
+                ..Default::default()
+            })
+            .build()
+            .expect("Fail to load the face detector.");
 
     let image = image::open("tests/data/images/faces.jpg")
         .expect("Can't open test image.")

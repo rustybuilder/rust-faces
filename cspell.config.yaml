@@ -3,10 +3,18 @@ ignorePaths: []
 dictionaryDefinitions: []
 dictionaries: []
 words:
+  - blazeface
   - curr
+  - iproduct
+  - itertools
+  - mtcnn
   - onet
+  - Onnx
+  - optmized
   - PNET
+  - priorboxes
   - rnet
   - rstest
+  - thiserror
 ignoreWords: []
 import: []
