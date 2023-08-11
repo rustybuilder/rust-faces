@@ -88,10 +88,12 @@ impl FaceDetector {
     }
 }
 
-fn build(detector: rust::FaceDetection, 
+fn build(
+    detector: rust::FaceDetection,
     model_path: Option<&str>,
     infer_provider: Option<InferProvider>,
-    device_id: i32,) -> PyResult<FaceDetector> { 
+    device_id: i32,
+) -> PyResult<FaceDetector> {
     let mut builder = rust::FaceDetectorBuilder::new(detector);
 
     builder = if let Some(model_path) = model_path {
@@ -128,9 +130,9 @@ fn build(detector: rust::FaceDetection,
 }
 
 /// Builds a MTCNN-based face detector.
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * `model_path` - Path to directory containing the `pnet.onnx`, `rnet.onnx`, `onet.onnx`.
 ///   If not specified, the model will be downloaded.
 /// * `score_thresholds` - A tuple of three floats representing the thresholds for the three stages of the MTCNN.
@@ -138,7 +140,7 @@ fn build(detector: rust::FaceDetection,
 /// * `infer_provider` - The inference provider to use.
 /// * `device_id` - The device ID to use.
 #[pyfunction]
-#[pyo3(signature = (model_path=None, score_thresholds=(0.6, 0.6, 0.95), 
+#[pyo3(signature = (model_path=None, score_thresholds=(0.6, 0.6, 0.95),
     nms_iou=0.3,
     min_face_size=24,
     scale_factor=0.709,
@@ -165,9 +167,9 @@ fn mtcnn(
 }
 
 /// Builds a BlazeFace-based face detector.
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * `blazeface_type` - The type of BlazeFace model to use.
 /// * `model_path` - Path to directory containing the `blazeface.onnx`.
 ///  If not specified, the model will be downloaded.
@@ -175,9 +177,9 @@ fn mtcnn(
 /// * `nms_iou` - The IoU threshold for non-maximum suppression.
 /// * `infer_provider` - The inference provider to use.
 /// * `device_id` - The device ID to use.
-/// 
+///
 /// # Returns
-/// 
+///
 /// A `FaceDetector` instance.
 #[pyfunction]
 #[pyo3(signature = (blazeface_type, model_path=None, score_threshold=0.95, nms_iou=0.3, infer_provider=None, device_id=0))]

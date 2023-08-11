@@ -19,7 +19,7 @@ This project aims to provide a Rust interface for multiple state-of-the-art face
 The project aims to include a selection of popular and high-performing face detection models, such as:
 
 * [x] [BlazeFace](https://github.com/zineos/blazeface) - BlazeFace640 and BlazeFace320
-* [x] MTCNN (Multi-Task Cascaded Convolutional Networks)
+* [x] MTCNN (Multi-Task Cascaded Convolutional Networks) - Models from [timesler/facenet-pytorch](https://github.com/timesler/facenet-pytorch)
 
 **Please note that the availability of specific models may vary depending on the licensing terms and open-source availability of the respective models.**
 
@@ -40,15 +40,21 @@ $ cargo add rust-faces --features viz
 
 ```rust
 use rust_faces::{
-    viz, DetectionParams, FaceDetection, FaceDetectorBuilder, ToArray3,
+    viz, BlazeFaceParams, FaceDetection, FaceDetectorBuilder, InferParams, Provider, ToArray3,
     ToRgb8,
 };
 
 pub fn main() {
-    let face_detector = FaceDetectorBuilder::new(FaceDetection::BlazeFace640)
-        .download()
-        .build()
-        .expect("Fail to load the face detector.");
+    let face_detector =
+        FaceDetectorBuilder::new(FaceDetection::BlazeFace640(BlazeFaceParams::default()))
+            .download()
+            .infer_params(InferParams {
+                provider: Provider::OrtCpu,
+                intra_threads: Some(5),
+                ..Default::default()
+            })
+            .build()
+            .expect("Fail to load the face detector.");
 
     let image = image::open("tests/data/images/faces.jpg")
         .expect("Can't open test image.")
