@@ -29,8 +29,8 @@ rstest = "0.17.0"
 criterion = { version = "0.4", features = ["html_reports"] }
 
 [[test]]
-name = "should_have_smooth_design"
-path = "tests/should_have_smooth_design.rs"
+name = "test_code_design"
+path = "tests/test_code_design.rs"
 
 [[bench]]
 name = "detectors"

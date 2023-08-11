@@ -3,6 +3,7 @@ use rust_faces::{
     ToRgb8,
 };
 
+#[test]
 pub fn main() {
     let face_detector =
         FaceDetectorBuilder::new(FaceDetection::BlazeFace640(BlazeFaceParams::default()))
@@ -25,6 +26,6 @@ pub fn main() {
     viz::draw_faces(&mut image, faces);
     std::fs::create_dir_all("tests/output").expect("Can't create test output dir.");
     image
-        .save("tests/output/should_have_smooth_design.jpg")
+        .save("tests/output/test_design.jpg")
         .expect("Can't save test image.");
 }
