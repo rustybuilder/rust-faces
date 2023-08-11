@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
-use ort::ExecutionProvider;
+use ort::{
+    execution_providers::{CUDAExecutionProviderOptions, CoreMLExecutionProviderOptions},
+    ExecutionProvider,
+};
 
 use crate::{
     blazeface::BlazeFaceParams,
@@ -112,11 +115,15 @@ impl FaceDetectorBuilder {
 
         ort_builder = match self.infer_params.provider {
             Provider::OrtCuda(device_id) => {
-                if !ExecutionProvider::cuda().is_available() {
+                let provider = ExecutionProvider::CUDA(CUDAExecutionProviderOptions {
+                    device_id: device_id as u32,
+                    ..Default::default()
+                });
+
+                if !provider.is_available() {
                     eprintln!("Warning: CUDA is not available. It'll likely use CPU inference.");
                 }
-                ort_builder
-                    .with_execution_providers([ExecutionProvider::cuda().with_device_id(device_id)])
+                ort_builder.with_execution_providers([provider])
             }
             Provider::OrtVino(_device_id) => {
                 return Err(crate::RustFacesError::Other(
@@ -124,7 +131,9 @@ impl FaceDetectorBuilder {
                 ));
             }
             Provider::OrtCoreMl => {
-                ort_builder.with_execution_providers([ExecutionProvider::coreml()])
+                ort_builder.with_execution_providers([ExecutionProvider::CoreML(
+                    CoreMLExecutionProviderOptions::default(),
+                )])
             }
             _ => ort_builder,
         };
