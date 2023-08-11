@@ -138,6 +138,16 @@ for rect in rects:
 plt.show()
 ```
 
+## Benchmarks
+
+| Algorithm   | [min, mean, max] |
+|-------------|-----------------------------------|
+| MTCNN (cpu) |  [12.561 ms 13.083 ms 13.646 ms]  |
+| BlazeFace 320 (cpu) | [2.7741 ms 2.7817 ms 2.7900 ms] |
+| BlazeFace 640 (cpu) | [3.3369 ms 3.3430 ms 3.3498 ms] |
+
+*GPU times are ommited because the architectures are too small, causing them to be similar to CPU.
+
 ## Contributions
 
 Contributions to the project are welcome! If you have suggestions, bug reports, or would like to add support for additional face detection models or programming languages, please feel free to submit a pull request or open an issue.

@@ -12,13 +12,23 @@ fn criterion_benchmark(c: &mut Criterion) {
 
     for (name, detection, provider) in vec![
         (
-            "blazeface_cpu",
+            "blazeface640_cpu",
             FaceDetection::BlazeFace640(BlazeFaceParams::default()),
             Provider::OrtCpu,
         ),
         (
-            "blazeface_gpu",
+            "blazeface640_gpu",
             FaceDetection::BlazeFace640(BlazeFaceParams::default()),
+            Provider::OrtCuda(0),
+        ),
+        (
+            "blazeface320_cpu",
+            FaceDetection::BlazeFace320(BlazeFaceParams::default()),
+            Provider::OrtCpu,
+        ),
+        (
+            "blazeface320_gpu",
+            FaceDetection::BlazeFace320(BlazeFaceParams::default()),
             Provider::OrtCuda(0),
         ),
         (
