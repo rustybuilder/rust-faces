@@ -1,15 +1,20 @@
-use crate::{nms::Nms, Rect};
+use crate::Rect;
 use ndarray::ArrayViewD;
 use thiserror::Error;
 
+/// Error type for RustFaces.
 #[derive(Error, Debug)]
 pub enum RustFacesError {
+    /// IO errors.
     #[error("IO error: {0}")]
     IoError(std::io::Error),
+    /// Errors related to image processing
     #[error("Image error: {0}")]
     ImageError(String),
+    /// Errors related to inference engine (e.g. ONNX runtime)
     #[error("Inference error: {0}")]
     InferenceError(String),
+    /// Other errors.
     #[error("Other error: {0}")]
     Other(String),
 }
@@ -41,23 +46,4 @@ pub trait FaceDetector: Sync + Send {
     ///
     /// * `image` - Image to detect faces in. Should be in RGB format.
     fn detect(&self, image: ArrayViewD<u8>) -> RustFacesResult<Vec<Face>>;
-}
-
-/// Face detection common parameters.
-#[derive(Debug, Copy, Clone)]
-pub struct DetectionParams {
-    pub score_threshold: f32,
-    pub nms: Nms,
-}
-
-impl Default for DetectionParams {
-    /// Default parameters.
-    ///
-    /// Sets the score threshold to 0.95 and uses the default 0.3 as NMS threshold.
-    fn default() -> Self {
-        Self {
-            score_threshold: 0.95,
-            nms: Nms::default(),
-        }
-    }
 }

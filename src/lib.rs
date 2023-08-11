@@ -2,7 +2,7 @@ mod rect;
 pub use rect::Rect;
 
 mod detection;
-pub use detection::{DetectionParams, Face, FaceDetector, RustFacesError, RustFacesResult};
+pub use detection::{Face, FaceDetector, RustFacesError, RustFacesResult};
 
 mod ort;
 
@@ -15,8 +15,13 @@ pub use imaging::{ToArray3, ToRgb8};
 #[cfg(test)]
 pub mod testing;
 
+pub mod priorboxes;
+
 mod blazeface;
-pub use blazeface::BlazeFace;
+pub use blazeface::{BlazeFace, BlazeFaceParams};
+
+mod mtcnn;
+pub use mtcnn::{MtCnn, MtCnnParams};
 
 mod builder;
 

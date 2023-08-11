@@ -19,8 +19,7 @@ This project aims to provide a Rust interface for multiple state-of-the-art face
 The project aims to include a selection of popular and high-performing face detection models, such as:
 
 * [x] [BlazeFace](https://github.com/zineos/blazeface) - BlazeFace640 and BlazeFace320
-* [ ] MTCNN (Multi-Task Cascaded Convolutional Networks)
-* [ ] EfficientDet
+* [x] MTCNN (Multi-Task Cascaded Convolutional Networks) - Models from [timesler/facenet-pytorch](https://github.com/timesler/facenet-pytorch)
 
 **Please note that the availability of specific models may vary depending on the licensing terms and open-source availability of the respective models.**
 
@@ -41,15 +40,21 @@ $ cargo add rust-faces --features viz
 
 ```rust
 use rust_faces::{
-    viz, DetectionParams, FaceDetection, FaceDetectorBuilder, ToArray3,
+    viz, BlazeFaceParams, FaceDetection, FaceDetectorBuilder, InferParams, Provider, ToArray3,
     ToRgb8,
 };
 
 pub fn main() {
-    let face_detector = FaceDetectorBuilder::new(FaceDetection::BlazeFace640)
-        .download()
-        .build()
-        .expect("Fail to load the face detector.");
+    let face_detector =
+        FaceDetectorBuilder::new(FaceDetection::BlazeFace640(BlazeFaceParams::default()))
+            .download()
+            .infer_params(InferParams {
+                provider: Provider::OrtCpu,
+                intra_threads: Some(5),
+                ..Default::default()
+            })
+            .build()
+            .expect("Fail to load the face detector.");
 
     let image = image::open("tests/data/images/faces.jpg")
         .expect("Can't open test image.")
@@ -101,7 +106,7 @@ More details on the [Ort](https://github.com/pykeio/ort) project.
 
 
 ```shell
-$ pip install -e "git+https://github.com/rustybuilder/rust-faces.git#egg=py-rust-faces&subdirectory=python"
+$ pip install -e "git+https://github.com/rustybuilder/rust-faces.git#egg=py-rust-faces&subdirectory=python" --install-option="--release"
 ```
 
 Usage:
@@ -114,7 +119,7 @@ from matplotlib.patches import Rectangle
 
 import py_rust_faces as prf
 
-detector = prf.build_detector(prf.FaceDetection.BlazeFace640)
+detector = prf.blazeface(prf.BlazeFace.Net320)
 image = np.array(Image.open(args.image))
 rects, _confidences, _landmarks = detector.detect(image)
 plt.imshow(image)
@@ -132,6 +137,16 @@ for rect in rects:
     )
 plt.show()
 ```
+
+## Benchmarks
+
+| Algorithm   | [min, mean, max] |
+|-------------|-----------------------------------|
+| MTCNN (cpu) |  [12.561 ms 13.083 ms 13.646 ms]  |
+| BlazeFace 320 (cpu) | [2.7741 ms 2.7817 ms 2.7900 ms] |
+| BlazeFace 640 (cpu) | [3.3369 ms 3.3430 ms 3.3498 ms] |
+
+*GPU times are ommited because the architectures are too small, causing them to be similar to CPU.
 
 ## Contributions
 

@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import argparse
 
 import cv2
@@ -10,14 +11,33 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--camera",
+        "-c",
         default=0,
         type=int,
     )
+    parser.add_argument(
+        "--detector",
+        "-d",
+        choices=["blazeface320", "blazeface640", "mtcnn"],
+        default="mtcnn",
+    )
+    parser.add_argument(
+        "--provider", "-p", choices=["cpu", "cuda", "vino"], default="cpu"
+    )
     args = parser.parse_args()
 
-    detector = prf.build_detector(
-        prf.FaceDetection.BlazeFace640, infer_provider=prf.InferProvider.OrtCuda
-    )
+    infer_provider = prf.InferProvider.OrtCpu
+    if args.provider == "cuda":
+        infer_provider = prf.InferProvider.OrtCuda
+    elif args.provider == "vino":
+        infer_provider = prf.InferProvider.OrtVino
+
+    if args.detector == "blazeface320":
+        detector = prf.blazeface(prf.BlazeFace.Net320, infer_provider=infer_provider)
+    elif args.detector == "blazeface640":
+        detector = prf.blazeface(prf.BlazeFace.Net640, infer_provider=infer_provider)
+    else:
+        detector = prf.mtcnn(infer_provider=infer_provider)
 
     capture = cv2.VideoCapture(args.camera)
 

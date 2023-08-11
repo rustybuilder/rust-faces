@@ -31,7 +31,7 @@ impl RectPosition {
     }
 
     /// Makes a rectangle with the given end point.
-    pub fn with_end(&self, x: f32, y: f32) -> Rect {
+    pub fn ending_at(&self, x: f32, y: f32) -> Rect {
         Rect {
             x: self.x,
             y: self.y,
@@ -93,7 +93,28 @@ impl Rect {
         let left = self.x.max(other.x);
         let right = self.right().min(other.right());
         let top = self.y.max(other.y);
-        let bottom = (self.bottom()).min(other.bottom());
+        let bottom = self.bottom().min(other.bottom());
+
+        Rect {
+            x: left,
+            y: top,
+            width: right - left,
+            height: bottom - top,
+        }
+    }
+
+    /// Clamps the rectangle to the given rect.
+    /// If the rectangle is larger than the given size, it will be shrunk.
+    ///
+    /// # Arguments
+    ///
+    /// * `width` - Width to clamp to.
+    /// * `height` - Height to clamp to.
+    pub fn clamp(&self, width: f32, height: f32) -> Rect {
+        let left = self.x.max(0.0);
+        let right = self.right().min(width);
+        let top = self.y.max(0.0);
+        let bottom = self.bottom().min(height);
 
         Rect {
             x: left,
@@ -123,6 +144,28 @@ impl Rect {
         let area_other = other.width * other.height;
 
         intersection / (area_self + area_other - intersection)
+    }
+
+    /// Calculates the intersection over union of two rectangles.
+    ///
+    /// # Arguments
+    ///
+    /// * `other` - Other rectangle to calculate the intersection over union with.
+    ///
+    /// # Returns
+    ///
+    /// * `f32` - Intersection over union.
+    pub fn iou_min(&self, other: &Rect) -> f32 {
+        let left = self.x.max(other.x);
+        let right = (self.right()).min(other.right());
+        let top = self.y.max(other.y);
+        let bottom = (self.bottom()).min(other.bottom());
+
+        let intersection = (right - left).max(0.0) * (bottom - top).max(0.0);
+        let area_self = self.width * self.height;
+        let area_other = other.width * other.height;
+
+        intersection / area_self.min(area_other)
     }
 
     /// Scales the rectangle.

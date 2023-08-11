@@ -3,14 +3,14 @@ use numpy::{
     IntoPyArray, PyArray1, PyArray2, PyArray3, PyReadonlyArrayDyn,
 };
 use pyo3::prelude::*;
-use rust::{DetectionParams, Nms};
+use rust::Nms;
 use rust_faces as rust;
 
 #[pyclass]
 #[derive(Copy, Clone)]
-enum FaceDetection {
-    BlazeFace640 = 0,
-    BlazeFace320 = 1,
+enum BlazeFace {
+    Net640 = 0,
+    Net320 = 1,
 }
 
 #[pyclass]
@@ -88,40 +88,13 @@ impl FaceDetector {
     }
 }
 
-/// Builds a face detector.
-///
-/// # Arguments
-///
-/// * `detection` - The face detection method to use.
-/// * `model_path` - The path to the model file. If not specified, the model will be downloaded.
-/// * `score_threshold` - The minimum confidence score for a face to be detected.
-/// * `nms_iou` - The IoU threshold for non-maximum suppression.
-/// * `infer_provider` - The inference provider to use. If not specified, the cpu provider will be used.
-/// * `device_id` - The device id to use. Only applicable for CUDA and OpenVINO providers.
-///
-/// # Returns
-///
-/// A `FaceDetector` instance.
-///
-/// # Raises
-///
-/// * `PyRuntimeError` - If the detector could not be built.
-#[pyfunction]
-#[pyo3(signature = (detection, model_path=None, score_threshold=0.95, nms_iou=0.3, infer_provider=None, device_id=0))]
-fn build_detector(
-    detection: FaceDetection,
+fn build(
+    detector: rust::FaceDetection,
     model_path: Option<&str>,
-    score_threshold: f32,
-    nms_iou: f32,
     infer_provider: Option<InferProvider>,
     device_id: i32,
 ) -> PyResult<FaceDetector> {
-    let detection_method = match detection {
-        FaceDetection::BlazeFace640 => rust::FaceDetection::BlazeFace640,
-        FaceDetection::BlazeFace320 => rust::FaceDetection::BlazeFace320,
-    };
-
-    let mut builder = rust::FaceDetectorBuilder::new(detection_method);
+    let mut builder = rust::FaceDetectorBuilder::new(detector);
 
     builder = if let Some(model_path) = model_path {
         builder.from_file(model_path.to_string())
@@ -138,12 +111,6 @@ fn build_detector(
     };
 
     let detector_impl = builder
-        .detect_params(DetectionParams {
-            score_threshold,
-            nms: Nms {
-                iou_threshold: nms_iou,
-            },
-        })
         .infer_params(rust::InferParams {
             provider,
             ..Default::default()
@@ -162,13 +129,92 @@ fn build_detector(
     }
 }
 
+/// Builds a MTCNN-based face detector.
+///
+/// # Arguments
+///
+/// * `model_path` - Path to directory containing the `pnet.onnx`, `rnet.onnx`, `onet.onnx`.
+///   If not specified, the model will be downloaded.
+/// * `score_thresholds` - A tuple of three floats representing the thresholds for the three stages of the MTCNN.
+/// * `nms_iou` - The IoU threshold for non-maximum suppression.
+/// * `infer_provider` - The inference provider to use.
+/// * `device_id` - The device ID to use.
+#[pyfunction]
+#[pyo3(signature = (model_path=None, score_thresholds=(0.6, 0.6, 0.95),
+    nms_iou=0.3,
+    min_face_size=24,
+    scale_factor=0.709,
+    infer_provider=None, device_id=0))]
+fn mtcnn(
+    model_path: Option<&str>,
+    score_thresholds: (f32, f32, f32),
+    nms_iou: f32,
+    min_face_size: usize,
+    scale_factor: f32,
+    infer_provider: Option<InferProvider>,
+    device_id: i32,
+) -> PyResult<FaceDetector> {
+    let detector = rust::FaceDetection::MtCnn(rust::MtCnnParams {
+        min_face_size,
+        scale_factor,
+        thresholds: [score_thresholds.0, score_thresholds.1, score_thresholds.2],
+        nms: Nms {
+            iou_threshold: nms_iou,
+        },
+    });
+
+    build(detector, model_path, infer_provider, device_id)
+}
+
+/// Builds a BlazeFace-based face detector.
+///
+/// # Arguments
+///
+/// * `blazeface_type` - The type of BlazeFace model to use.
+/// * `model_path` - Path to directory containing the `blazeface.onnx`.
+///  If not specified, the model will be downloaded.
+/// * `score_threshold` - The confidence threshold for face detection.
+/// * `nms_iou` - The IoU threshold for non-maximum suppression.
+/// * `infer_provider` - The inference provider to use.
+/// * `device_id` - The device ID to use.
+///
+/// # Returns
+///
+/// A `FaceDetector` instance.
+#[pyfunction]
+#[pyo3(signature = (blazeface_type, model_path=None, score_threshold=0.95, nms_iou=0.3, infer_provider=None, device_id=0))]
+fn blazeface(
+    blazeface_type: BlazeFace,
+    model_path: Option<&str>,
+    score_threshold: f32,
+    nms_iou: f32,
+    infer_provider: Option<InferProvider>,
+    device_id: i32,
+) -> PyResult<FaceDetector> {
+    let params = rust::BlazeFaceParams {
+        score_threshold,
+        nms: Nms {
+            iou_threshold: nms_iou,
+        },
+        ..Default::default()
+    };
+
+    let detection_method = match blazeface_type {
+        BlazeFace::Net640 => rust::FaceDetection::BlazeFace640(params),
+        BlazeFace::Net320 => rust::FaceDetection::BlazeFace320(params),
+    };
+
+    build(detection_method, model_path, infer_provider, device_id)
+}
+
 /// py-rust-faces is a Python binding to the rust-faces library.
 /// (https://github.com/rustybuilder/rust-faces/)
 #[pymodule]
 fn py_rust_faces(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
-    m.add_class::<FaceDetection>()?;
+    m.add_class::<BlazeFace>()?;
     m.add_class::<InferProvider>()?;
     m.add_class::<FaceDetector>()?;
-    m.add_function(wrap_pyfunction!(build_detector, m)?)?;
+    m.add_function(wrap_pyfunction!(blazeface, m)?)?;
+    m.add_function(wrap_pyfunction!(mtcnn, m)?)?;
     Ok(())
 }
