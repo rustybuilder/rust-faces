@@ -111,8 +111,12 @@ impl FaceDetectorBuilder {
         let mut ort_builder = ort::Environment::builder().with_name("RustFaces");
 
         ort_builder = match self.infer_params.provider {
-            Provider::OrtCuda(device_id) => ort_builder
-                .with_execution_providers([ExecutionProvider::cuda().with_device_id(device_id)]),
+            Provider::OrtCuda(device_id) => { 
+                if !ExecutionProvider::cuda().is_available() {
+                    eprintln!("Warning: CUDA is not available. It'll likely use CPU inference.");
+                }
+                ort_builder
+                .with_execution_providers([ExecutionProvider::cuda().with_device_id(device_id)]) },
             Provider::OrtVino(_device_id) => {
                 return Err(crate::RustFacesError::Other(
                     "OpenVINO is not supported yet.".to_string(),
