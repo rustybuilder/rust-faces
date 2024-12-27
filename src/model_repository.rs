@@ -1,5 +1,6 @@
 use crate::builder::FaceDetection;
 use crate::detection::{RustFacesError, RustFacesResult};
+use directories::ProjectDirs;
 use indicatif::{ProgressBar, ProgressStyle};
 use reqwest::header::{HeaderMap, HeaderValue, ACCEPT};
 use std::fs::File;
@@ -66,16 +67,13 @@ fn download_file(url: &str, destination: &str) -> RustFacesResult<()> {
 }
 
 fn get_cache_dir() -> RustFacesResult<PathBuf> {
-    let home_dir = home::home_dir();
-    if home_dir.is_none() {
-        return Err(RustFacesError::Other(
-            "Failed to get home directory.".to_string(),
-        ));
-    }
+    let dirs = ProjectDirs::from("", "rustybuilder", "rust_faces")
+        .ok_or(RustFacesError::Other("Failed to get home directory".into()))?;
 
-    let cache_dir = home_dir.unwrap().join(".rust_faces/");
+    let cache_dir = dirs.cache_dir();
     std::fs::create_dir_all(&cache_dir)?;
-    Ok(cache_dir)
+
+    Ok(cache_dir.into())
 }
 
 pub struct GitHubRepository {}
@@ -90,17 +88,17 @@ impl ModelRepository for GitHubRepository {
     fn get_model(&self, face_detector: &FaceDetection) -> RustFacesResult<Vec<PathBuf>> {
         let (urls, filenames) = match face_detector {
             FaceDetection::BlazeFace640(_) => (
-                ["https://github.com/rustybuilder/model-zoo/raw/main/face-detection/blazefaces-640.onnx"].as_slice(),
+                ["https://github.com/blissd/fotema-rust-faces-model-zoo/raw/main/face-detection/blazefaces-640.onnx"].as_slice(),
                 ["blazeface-640.onnx"].as_slice(),
             ),
             FaceDetection::BlazeFace320(_) => (
-                ["https://github.com/rustybuilder/model-zoo/raw/main/face-detection/blazeface-320.onnx"].as_slice(),
+                ["https://github.com/blissd/fotema-rust-faces-model-zoo/raw/main/face-detection/blazeface-320.onnx"].as_slice(),
                 ["blazeface-320.onnx"].as_slice(),
             ),
             FaceDetection::MtCnn(_) => (
-                ["https://github.com/rustybuilder/model-zoo/raw/main/face-detection/mtcnn-pnet.onnx",
-                "https://github.com/rustybuilder/model-zoo/raw/main/face-detection/mtcnn-rnet.onnx",
-                "https://github.com/rustybuilder/model-zoo/raw/main/face-detection/mtcnn-onet.onnx"].as_slice(),
+                ["https://github.com/blissd/fotema-rust-faces-model-zoo/raw/main/face-detection/mtcnn-pnet.onnx",
+                "https://github.com/blissd/fotema-rust-faces-model-zoo/raw/main/face-detection/mtcnn-rnet.onnx",
+                "https://github.com/blissd/fotema-rust-faces-model-zoo/raw/main/face-detection/mtcnn-onet.onnx"].as_slice(),
                 ["mtcnn-pnet.onnx", "mtcnn-rnet.onnx", "mtcnn-onet.onnx"].as_slice(),
             )
         };
@@ -132,7 +130,7 @@ mod tests {
     #[ignore]
     fn test_download() {
         download_file(
-            "https://github.com/rustybuilder/model-zoo/raw/main/face-detection/blazeface-320.onnx",
+            "https://github.com/blissd/fotema-rust-faces-model-zoo/raw/main/face-detection/blazeface-320.onnx",
             "tests/output/sample_download",
         )
         .unwrap();
