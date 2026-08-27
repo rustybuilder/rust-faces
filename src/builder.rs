@@ -1,9 +1,4 @@
-use std::sync::Arc;
-
-use ort::{
-    execution_providers::{CUDAExecutionProviderOptions, CoreMLExecutionProviderOptions},
-    ExecutionProvider,
-};
+use ort::ep;
 
 use crate::{
     blazeface::BlazeFaceParams,
@@ -111,19 +106,22 @@ impl FaceDetectorBuilder {
     ///
     /// A new face detector.
     pub fn build(&self) -> RustFacesResult<Box<dyn FaceDetector>> {
-        let mut ort_builder = ort::Environment::builder().with_name("RustFaces");
+        let ort_builder = ort::init();
 
-        ort_builder = match self.infer_params.provider {
+        let ort_builder = ort_builder.with_execution_providers([
+            ep::Vitis::default().build(),
+            ep::CUDA::default().build(),
+            ep::CPU::default().build(),
+        ]);
+
+        /*ort_builder = match self.infer_params.provider {
             Provider::OrtCuda(device_id) => {
-                let provider = ExecutionProvider::CUDA(CUDAExecutionProviderOptions {
-                    device_id: device_id as u32,
-                    ..Default::default()
-                });
+                let provider = CUDAExecutionProvider::default().with_device_id(device_id);
 
-                if !provider.is_available() {
+                if !provider.is_available().is_ok_and(|x| x) {
                     eprintln!("Warning: CUDA is not available. It'll likely use CPU inference.");
                 }
-                ort_builder.with_execution_providers([provider])
+                ort_builder.with_execution_providers([provider.build()])
             }
             Provider::OrtVino(_device_id) => {
                 return Err(crate::RustFacesError::Other(
@@ -131,14 +129,13 @@ impl FaceDetectorBuilder {
                 ));
             }
             Provider::OrtCoreMl => {
-                ort_builder.with_execution_providers([ExecutionProvider::CoreML(
-                    CoreMLExecutionProviderOptions::default(),
-                )])
+                ort_builder.with_execution_providers([CoreMLExecutionProvider::default().build()])
             }
             _ => ort_builder,
-        };
+        };*/
 
-        let env = Arc::new(ort_builder.build()?);
+        ort_builder.commit(); // create environment
+
         let repository = GitHubRepository::new();
 
         let model_paths = match &self.open_mode {
@@ -152,18 +149,15 @@ impl FaceDetectorBuilder {
 
         match &self.detector {
             FaceDetection::BlazeFace640(params) => Ok(Box::new(BlazeFace::from_file(
-                env,
                 &model_paths[0],
                 params.clone(),
-            ))),
+            )?)),
             FaceDetection::BlazeFace320(params) => Ok(Box::new(BlazeFace::from_file(
-                env,
                 &model_paths[0],
                 params.clone(),
-            ))),
+            )?)),
             FaceDetection::MtCnn(params) => Ok(Box::new(
                 MtCnn::from_file(
-                    env,
                     &model_paths[0],
                     &model_paths[1],
                     &model_paths[2],

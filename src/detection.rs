@@ -45,5 +45,5 @@ pub trait FaceDetector: Sync + Send {
     /// # Arguments
     ///
     /// * `image` - Image to detect faces in. Should be in RGB format.
-    fn detect(&self, image: ArrayViewD<u8>) -> RustFacesResult<Vec<Face>>;
+    fn detect(&mut self, image: ArrayViewD<u8>) -> RustFacesResult<Vec<Face>>;
 }

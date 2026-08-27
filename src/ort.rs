@@ -1,9 +1,7 @@
-use ort::OrtError;
-
 use crate::detection::RustFacesError;
 
-impl From<OrtError> for RustFacesError {
-    fn from(err: OrtError) -> Self {
+impl From<ort::Error> for RustFacesError {
+    fn from(err: ort::Error) -> Self {
         RustFacesError::InferenceError(err.to_string())
     }
 }
